@@ -1,13 +1,14 @@
-//console.log("hi");
+////////////////////////////////////////////////////////////////////////////////
+// GAME CLASSES
 
-//const map = [[true, false, false, false, true], []]
-
+// the "trail" left behind players. This is a circle that reduces in opacity every
+// time it's drawn, reduced by a pre-specified amount
 class Trail {
   constructor(x, y, opacity, decAmt) {
     this.x = x;
     this.y = y;
     this.opacity = opacity;
-    this.decAmt = decAmt;
+    this.decAmt = decAmt; // amont to reduce per update
   }
 
   draw() {
@@ -18,8 +19,9 @@ class Trail {
   }
 }
 
+// the player itself. It has a position and list of trails that are left behind it.
 class Player {
-  constructor(x, y, image) {
+  constructor(x, y) {
     this.prevX = x;
     this.prevY = y;
     this.x = x;
@@ -27,7 +29,6 @@ class Player {
     this.w = 10; //hitbox: w and h (used for collision)
     this.h = 10;
     this.trails = [];
-    this.image = image;
   }
 
   // for if we make the character a circle...
@@ -70,17 +71,6 @@ class Player {
   }
 
   draw(accel) {
-    // Push + pop make options apply only to lines within
-    // playerX = this.x
-    // playerY = this.y
-
-    // strokeWeight(1500)
-    // noFill(); //makes the circle transparent so that it reveals other things on the map
-    // circle(this.x, this.y, 2000);
-
-    // rect(this.x, this.y, this.w, this.h)
-    // image(this.image, this.x, this.y, this.w, this.h);
-
     // add a new trail at the new position
     //TODO: have variable starting opacity and decAmt
     this.trails.push(
@@ -102,6 +92,7 @@ class Player {
   }
 }
 
+// the walls that are scattered around the map. These are just rectangles.
 class Wall {
   constructor(x, y, w, h) {
     this.x = x;
@@ -116,6 +107,9 @@ class Wall {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// GLOBALS
+
 // initialize the map's walls
 const level_map = [
   new Wall(50, 50, 10, 100),
@@ -125,7 +119,7 @@ const level_map = [
   new Wall(300, 200, 10, 200),
 ];
 
-let player;
+let player = new Player(0, 0);
 
 let SpeedOn = false;
 var accel = 1;
@@ -134,14 +128,8 @@ var radius = 1;
 var prevX = 0;
 var prevY = 0;
 
-function preload() {
-  // load the player sprite
-  const img = loadImage(
-    "https://cdn.glitch.com/a646d7e0-0d5b-45e4-83ad-8ef03945520c%2FGoldfish.png?v=1600815713378"
-  );
-  // initialize the player
-  player = new Player(0, 0, img);
-}
+////////////////////////////////////////////////////////////////////////////////
+// SERVER COMMUNICATION
 
 //called by the server upon any user action including me
 function onAction(obj) {
@@ -183,6 +171,9 @@ function setup() {
 
   createCanvas(window.innerWidth, window.innerHeight);
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// GAME RENDERING
 
 // called every frame
 function draw() {
