@@ -6,13 +6,15 @@ const io = require("socket.io")(http);
 //when a client connects serve the static files in the public directory
 app.use(express.static("public"));
 
-// the rate the server updates all the clients, 1fps
-// setInterval works in milliseconds
-const UPDATE_TIME = 1000;
+// the rate the server updates all the clients, FPS frames per sec
+const FPS = 1;
+const UPDATE_TIME = 1000 / FPS;
 const MAX_PLAYERS = 4;
-const MAX_COOLDOWN = 3;
-const MAX_MOVE = 2;
-const ROUND_TIMING = 120; // each round is 120 sec
+
+// Timer variables: seconds they should be * FPS
+const MAX_COOLDOWN = 3 * FPS;
+const MAX_MOVE = 2 * FPS;
+const ROUND_TIMING = 120 * FPS;
 
 // the map
 // each index represents a node in the network. The array at each index contains
@@ -23,8 +25,9 @@ const map = [
   [0, 1],
 ];
 
-//TODO define this better
+//TODO: define this in a different way
 const MAX_PAYLOADS = map.length / 2;
+const PAYLOAD_NODE = 0;
 
 // the game state
 var state = {
@@ -100,16 +103,22 @@ io.on("connection", (socket) => {
     //TODO check if player is currently moving; if so don't highlight other movement nodes + don't let them click anything
   });
 
-  // Called every 1 second
+  // setInterval works in milliseconds
   setInterval(function () {
     // Do processing of game state
     for (var playerId in state.players) {
       var playerState = state.players[playerId];
-      if (playerState.moveTimer > 0) {
-        playerState.moveTimer--;
-      }
+      // Cooldown on movement
       if (playerState.coolTimer > 0) {
         playerState.coolTimer--;
+      }
+
+      // Player is moving
+      if (playerState.moveTimer > 0) {
+        playerState.moveTimer--;
+        if (playerState.moveTimer === 0) {
+          playerState.coolTimer = MAX_COOLDOWN;
+        }
       }
     }
 
@@ -140,7 +149,8 @@ function startGame() {
   //TODO render some "game start" text on the client side/confirmation
   // show # of payloads brought to center in a text??
   state.gameTimer = ROUND_TIMING;
-  // Initialize payload array
+
+  // Initialize payload array to false
   for (let i = 0; i < map.length; i++) {
     state.payloads[i] = false;
   }
@@ -157,8 +167,12 @@ function generatePayloads(numberToAdd) {
     let foundPayload = false;
     // Keep looking for an empty node on the map
     while (!foundPayload) {
-      // Random number between 1 and map.length-1 (inclusive)
-      let j = Math.floor(Math.random() * (map.length - 1) + 1);
+      // Random number between 0 and map.length-1 (inclusive)
+      let j = Math.floor(Math.random() * (map.length));
+      // shouldn't be the node we bring payloads to
+      if (j === PAYLOAD_NODE) continue;
+
+      // Check if we can add the payload
       if (state.payloads[j] === false) {
         state.payloads[j] = true;
         foundPayload = true;
