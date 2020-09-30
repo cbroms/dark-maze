@@ -12,7 +12,6 @@ class Trail {
   }
 
   draw() {
-    noStroke();
     this.opacity -= this.decAmt;
     fill(255, 0, 0, this.opacity);
     circle(this.x, this.y, 10);
@@ -21,105 +20,101 @@ class Trail {
 
 // the player itself. It has a position and list of trails that are left behind it.
 class Player {
-  constructor(x, y) {
-    this.prevX = x;
-    this.prevY = y;
-    this.x = x;
-    this.y = y;
-    this.w = 10; //hitbox: w and h (used for collision)
-    this.h = 10;
-    this.trails = [];
+  constructor(hasPayload, color) {
+    this.hasPayload = this.hasPayload;
+    this.radius = 15;
+    this.color = color;
   }
 
-  // for if we make the character a circle...
-  // https://stackoverflow.com/a/21096179
-  updatePosition(addX, addY, walls) {
-    if (this.collidesWith(this.x, this.y, walls)) {
-      this.x = this.prevX;
-      this.y = this.prevY;
-      return;
-    }
-
-    if (this.collidesWith(this.x + addX, this.y + addY, walls)) {
-      return;
-    }
-
-    // Set current position as "prev"
-    this.prevX = this.x;
-    this.prevY = this.y;
-
-    //check if we are on the boundary
-    if (this.x + addX < 0 || this.x + addX > windowWidth - this.w) return;
-    if (this.y + addY < 0 || this.y + addY > windowHeight - this.h) return;
-    this.x += addX;
-    this.y += addY;
-  }
-
-  collidesWith(xCoord, yCoord, walls) {
-    let collides = false;
-
-    for (const wall of walls) {
-      if (
-        wall.x < xCoord + this.w &&
-        wall.x + wall.w > xCoord &&
-        wall.y < yCoord + this.h &&
-        wall.y + wall.h > yCoord
-      )
-        collides = true;
-    }
-    return collides;
-  }
-
-  draw(accel) {
-    // add a new trail at the new position
-    //TODO: have variable starting opacity and decAmt
-    this.trails.push(
-      new Trail(
-        this.x + this.w / 2,
-        this.y + this.h / 2,
-        map(accel, 0, 20, 255, 150),
-        map(accel, 0, 20, 1, 5)
-      )
-    );
-
-    for (const trail of this.trails) {
-      trail.draw();
-    }
-
-    if (this.trails.length > 0 && this.trails[0].opacity <= 0) {
-      this.trails.shift();
-    }
+  draw(x, y) {
+    fill(this.color);
+    circle(x, y, this.radius);
   }
 }
 
-// the walls that are scattered around the map. These are just rectangles.
-class Wall {
-  constructor(x, y, w, h) {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
+class Edge {
+  constructor(startX, startY, endX, endY, id) {
+    this.startX = startX;
+    this.startY = startY;
+    this.endX = endX;
+    this.endY = endY;
+    this.id = id;
   }
 
   draw() {
-    fill(0); //color of the walls
-    rect(this.x, this.y, this.w, this.h);
+    strokeWeight(6);
+    stroke(0);
+    line(this.startX, this.startY, this.endX, this.endY);
+  }
+}
+
+// the nodes aka "servers"
+class Node {
+  constructor(x, y, id, edges) {
+    this.id = id;
+    this.edges = edges;
+    this.x = x;
+    this.y = y;
+    this.radius = 60;
+    this.players = [];
+  }
+
+  mouseIsIn() {
+    // check if the mouse is within the node
+    return (mouseX - this.x) ** 2 + (mouseY - this.y) ** 2 < this.radius ** 2;
+  }
+
+  draw(clickable) {
+    strokeWeight(2);
+    if (clickable) {
+      stroke("red");
+    } else {
+      stroke("black");
+    }
+    fill(100);
+    circle(this.x, this.y, this.radius);
+
+    // draw the players within the node
+    // there are four possible positions to draw the players in the node,
+    // and we want each player to have a unique position so there's no overlap
+    for (let i = 0; i < this.players.length; i++) {
+      const playerRad = (this.players[i].radius / 3) * 2;
+      // just hardcoding the positions, could be tricky here with mod
+      switch (i) {
+        case 0:
+          this.players[i].draw(this.x - playerRad, this.y + playerRad);
+          break;
+        case 1:
+          this.players[i].draw(this.x + playerRad, this.y + playerRad);
+          break;
+        case 2:
+          this.players[i].draw(this.x + playerRad, this.y - playerRad);
+          break;
+        case 3:
+          this.players[i].draw(this.x - playerRad, this.y - playerRad);
+          break;
+      }
+    }
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // GLOBALS
 
-// initialize the map's walls
-const level_map = [
-  new Wall(50, 50, 10, 100),
-  new Wall(50, 150, 150, 15),
-  new Wall(500, 200, 100, 10),
-  new Wall(500, 200, 10, 200),
-  new Wall(300, 200, 10, 200),
+// TODO send all this stuff from the server
+// initialize the map's nodes
+const mapNodes = [[1, 2], [0, 2], [0, 1, 3], [2]];
+// the position of each node on the screen
+const positions = [
+  { x: 40, y: 50 },
+  { x: 100, y: 500 },
+  { x: 400, y: 600 },
+  { x: 500, y: 200 },
 ];
 
-let player = new Player(0, 0);
+// initialize the players
+let me = new Player(false, "#877fc1");
+let otherPlayer = new Player(false, "#c1857f");
 
 let SpeedOn = false;
 var accel = 1;
@@ -155,6 +150,10 @@ function onMessage(msg) {
 
 let socket;
 
+let currentNode = 0;
+let nodes = [];
+let edges = [];
+
 function setup() {
   socket = io({
     autoConnect: false,
@@ -169,7 +168,36 @@ function setup() {
 
   socket.open();
 
-  createCanvas(window.innerWidth, window.innerHeight);
+  // set the canvas size to 1000x800
+  createCanvas(1000, 900);
+
+  // initialize the nodes
+  nodes = mapNodes.map((node, i) => {
+    return new Node(positions[i].x, positions[i].y, i, node);
+  });
+
+  // initialize the edges
+  for (const node of nodes) {
+    for (const edge of node.edges) {
+      // if the edge does not already exist
+      if (!edges.some((edge) => edge.id === node.id + nodes[edge]?.id)) {
+        // add the new edge
+        edges.push(
+          new Edge(
+            node.x,
+            node.y,
+            nodes[edge].x,
+            nodes[edge].y,
+            node.id,
+            nodes[edge].id
+          )
+        );
+      }
+    }
+  }
+
+  // TODO remove this hard coded shit
+  nodes[0].players = [me];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -177,96 +205,113 @@ function setup() {
 
 // called every frame
 function draw() {
+  // draw the nodes/edges
+  background(255);
+
+  // for (let i = 0; i < edges.length; i++) {
+  //   edges[i].draw(currentNode === i);
+  // }
+
+  for (const edge of edges) {
+    edge.draw();
+  }
+
+  for (const node of nodes) {
+    // draw the node, letting it know if its "clickable"
+    node.draw(nodes[currentNode].edges.includes(node.id));
+  }
   //console.log(accel);
   // console.log(PressNum);
-  maxRadius = 100;
-  minRadius = 20;
-  radiusIncrement = 1;
+  // maxRadius = 100;
+  // minRadius = 20;
+  // radiusIncrement = 1;
+  // // Increase/decrease size of light circle
+  // if (accel === 0 || (player.x == prevX && player.y == prevY)) {
+  //   radius += radiusIncrement;
+  //   if (radius > maxRadius) radius = maxRadius;
+  // } else {
+  //   radius -= radiusIncrement;
+  //   if (radius < 20) radius = minRadius;
+  // }
+  // prevX = player.x;
+  // prevY = player.y;
+  // // We draw the circle BEFORE drawing the walls so that it looks like the circle "illuminates"
+  // // any surrounding walls
+  // background(0);
+  // fill(255);
+  // circle(player.x + player.w / 2, player.y + player.h / 2, radius);
+  // // draw all the walls to the canvas
+  // for (const wall of level_map) {
+  //   wall.draw();
+  // }
+  // // draw the player + trails
+  // player.draw(accel);
+  // if ((PressNum) => 1) {
+  //   accel += 0.25;
+  // }
+  // // if (SpeedOn == false) {
+  // //accel = 0;
+  // //}
+  // if (accel > 10) {
+  //   accel = 10;
+  // }
+  // // Player movementd
+  // if (keyIsDown(87)) {
+  //   // W key
+  //   player.updatePosition(0, -accel, level_map);
+  // }
+  // if (keyIsDown(65)) {
+  //   // A key
+  //   player.updatePosition(-accel, 0, level_map);
+  // }
+  // if (keyIsDown(83)) {
+  //   // S key
+  //   player.updatePosition(0, accel, level_map);
+  // }
+  // if (keyIsDown(68)) {
+  //   // D key
+  //   player.updatePosition(accel, 0, level_map);
+  // }
+  // if (!keyIsDown(87) && !keyIsDown(65) && !keyIsDown(83) && !keyIsDown(68)) {
+  //   //SpeedOn = false;
+  //   PressNum = 0;
+  //   accel = 0;
+  // }
+}
 
-  // Increase/decrease size of light circle
-  if (accel === 0 || (player.x == prevX && player.y == prevY)) {
-    radius += radiusIncrement;
-    if (radius > maxRadius) radius = maxRadius;
-  } else {
-    radius -= radiusIncrement;
-    if (radius < 20) radius = minRadius;
-  }
-
-  prevX = player.x;
-  prevY = player.y;
-
-  // We draw the circle BEFORE drawing the walls so that it looks like the circle "illuminates"
-  // any surrounding walls
-  background(0);
-  fill(255);
-  circle(player.x + player.w / 2, player.y + player.h / 2, radius);
-  // draw all the walls to the canvas
-  for (const wall of level_map) {
-    wall.draw();
-  }
-  // draw the player + trails
-  player.draw(accel);
-
-  if ((PressNum) => 1) {
-    accel += 0.25;
-  }
-
-  // if (SpeedOn == false) {
-  //accel = 0;
-  //}
-
-  if (accel > 10) {
-    accel = 10;
-  }
-
-  // Player movementd
-  if (keyIsDown(87)) {
-    // W key
-    player.updatePosition(0, -accel, level_map);
-  }
-
-  if (keyIsDown(65)) {
-    // A key
-    player.updatePosition(-accel, 0, level_map);
-  }
-
-  if (keyIsDown(83)) {
-    // S key
-    player.updatePosition(0, accel, level_map);
-  }
-
-  if (keyIsDown(68)) {
-    // D key
-    player.updatePosition(accel, 0, level_map);
-  }
-
-  if (!keyIsDown(87) && !keyIsDown(65) && !keyIsDown(83) && !keyIsDown(68)) {
-    //SpeedOn = false;
-    PressNum = 0;
-    accel = 0;
+function mouseClicked() {
+  for (let i = 0; i < nodes.length; i++) {
+    if (
+      nodes[currentNode].edges.includes(nodes[i].id) &&
+      nodes[i].mouseIsIn()
+    ) {
+      nodes[currentNode].players = [];
+      currentNode = i;
+      nodes[currentNode].players = [me];
+    }
   }
 }
 
-function keyPressed() {
-  // By pressing a kdey(WASD) we call upon the players Update Position to move it.
-  let keyIndex = -1;
+// function keyPressed() {
+//   // By pressing a kdey(WASD) we call upon the players Update Position to move it.
+//   let keyIndex = -1;
 
-  //console.log("key: " + code);
-  switch (
-    keyCode //switch tells us that thing we want to check for is a key press
-  ) {
-    case 68: // case tells us which key
-      PressNum += 1;
-      break; // break is like reutrn null, it is the default if it returns with nothing
-    case 65:
-      PressNum += 1;
-      break;
-    case 87:
-      PressNum += 1;
-      break;
-    case 83:
-      PressNum += 1;
-      break;
-    default:
-  }
-}
+//   //console.log("key: " + code);
+//   switch (
+//     keyCode //switch tells us that thing we want to check for is a key press
+//   ) {
+//     case 68: // case tells us which key
+//       PressNum += 1;
+//       break; // break is like reutrn null, it is the default if it returns with nothing
+//     case 65:
+//       PressNum += 1;
+//       break;
+//     case 87:
+//       PressNum += 1;
+//       break;
+//     case 83:
+//       PressNum += 1;
+//       break;
+//     default:
+//   }
+// }
