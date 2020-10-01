@@ -110,19 +110,19 @@ io.on("connection", (socket) => {
       var playerState = state.players[playerId];
       // Cooldown on movement
       if (playerState.coolTimer > 0) {
-        playerState.coolTimer--;
+        playerState.coolTimer -= 1;
       }
 
       // Player is moving
       if (playerState.moveTimer > 0) {
-        playerState.moveTimer--;
+        playerState.moveTimer -= 1;
         if (playerState.moveTimer === 0) {
           playerState.coolTimer = MAX_COOLDOWN;
         }
       }
     }
 
-    if (state.gameTimer > 0) state.gameTimer--;
+    if (state.gameTimer > 0) state.gameTimer -= 1;
     else if (state.gameTimer === 0) {
       endGame();
     }
