@@ -103,6 +103,9 @@ io.on("connection", (socket) => {
     //TODO check if player is currently moving; if so don't highlight other movement nodes + don't let them click anything
   });
 
+  //TODO: do we want an onDisconnect?
+});
+
   // setInterval works in milliseconds
   setInterval(function () {
     // Do processing of game state
@@ -133,9 +136,6 @@ io.on("connection", (socket) => {
     // Send the state to all players
     io.sockets.emit("state", state);
   }, UPDATE_TIME);
-
-  //TODO: do we want an onDisconnect?
-});
 
 function endGame() {
   // prevent any further user actions
