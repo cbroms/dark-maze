@@ -119,6 +119,10 @@ var radius = 1;
 var prevX = 0;
 var prevY = 0;
 
+var LinefloatX = 0;
+var lineNum = 0;
+var gRectfloatX;
+
 ////////////////////////////////////////////////////////////////////////////////
 // SERVER COMMUNICATION
 
@@ -215,12 +219,16 @@ function setup() {
 
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
+let img;
+function preload() {
+  img = loadImage("assets/cyberlines.gif");
+}
 
 // called every frame
 function draw() {
   // draw the nodes/edges
   background(255);
-
+  image(img, 10, 10, windowHeight, windowWidth);
   // for (let i = 0; i < edges.length; i++) {
   //   edges[i].draw(currentNode === i);
   // }
