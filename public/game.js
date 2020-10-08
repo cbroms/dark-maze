@@ -101,16 +101,12 @@ class Node {
 ////////////////////////////////////////////////////////////////////////////////
 // GLOBALS
 
-// TODO send all this stuff from the server
-// initialize the map's nodes
-const mapNodes = [[1, 2], [0, 2], [0, 1, 3], [2]];
-// the position of each node on the screen
-const positions = [
-  { x: 40, y: 50 },
-  { x: 100, y: 500 },
-  { x: 400, y: 600 },
-  { x: 500, y: 200 },
-];
+// map position
+let mapNodes;
+let positions;
+let currentNode = 0;
+let nodes = [];
+let edges = [];
 
 // initialize the players
 let me = new Player(false, "#877fc1");
@@ -148,11 +144,55 @@ function onMessage(msg) {
   }
 }
 
-let socket;
+function onMap(mapObj) {
+  if (socket.id) {
+    console.log("got map!");
+    console.log(mapObj);
+    // initialize the nodes
+    nodes = mapObj.mapNodes.map((node, i) => {
+      return new Node(mapObj.positions[i].x, mapObj.positions[i].y, i, node);
+    });
 
-let currentNode = 0;
-let nodes = [];
-let edges = [];
+    // initialize the edges
+    for (const node of nodes) {
+      for (const ed of node.edges) {
+        // if the edge does not already exist
+        if (
+          !edges.some(
+            (edge) =>
+              edge.id === node.id + "" + nodes[ed]?.id ||
+              edge.id === nodes[ed]?.id + "" + node.id
+          )
+        ) {
+          console.log(node.id + "" + nodes[ed].id + " edge added to map");
+          // add the new edge
+          edges.push(
+            new Edge(
+              node.x,
+              node.y,
+              nodes[ed].x,
+              nodes[ed].y,
+              node.id + "" + nodes[ed].id
+            )
+          );
+        }
+      }
+    }
+
+    // TODO remove this hard coded shit
+    nodes[0].players = [me];
+  }
+}
+
+//a message from the server
+function onState(state) {
+  if (socket.id) {
+    console.log("got new state");
+    console.log(state);
+  }
+}
+
+let socket;
 
 function setup() {
   socket = io({
@@ -161,43 +201,16 @@ function setup() {
 
   //detects a server connection
   socket.on("connect", onConnect);
-  //handles the messages from the server, the parameter is a string
-  socket.on("message", onMessage);
-  //handles the user action broadcast by the server, the parameter is an object
+  socket.on("map", onMap);
+
   socket.on("action", onAction);
+
+  socket.on("state", onState);
 
   socket.open();
 
   // set the canvas size to 1000x800
   createCanvas(1000, 900);
-
-  // initialize the nodes
-  nodes = mapNodes.map((node, i) => {
-    return new Node(positions[i].x, positions[i].y, i, node);
-  });
-
-  // initialize the edges
-  for (const node of nodes) {
-    for (const ed of node.edges) {
-      // if the edge does not already exist
-      if (!edges.some((edge) => edge.id === node.id + "" + nodes[ed]?.id || edge.id === nodes[ed]?.id + "" + node.id)) {
-        console.log(node.id + "" + nodes[ed].id + " edge added to map");
-        // add the new edge
-        edges.push(
-          new Edge(
-            node.x,
-            node.y,
-            nodes[ed].x,
-            nodes[ed].y,
-            node.id + "" + nodes[ed].id
-          )
-        );
-      }
-    }
-  }
-
-  // TODO remove this hard coded shit
-  nodes[0].players = [me];
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -211,15 +224,17 @@ function draw() {
   // for (let i = 0; i < edges.length; i++) {
   //   edges[i].draw(currentNode === i);
   // }
+  if (edges && nodes) {
+    for (const edge of edges) {
+      edge.draw();
+    }
 
-  for (const edge of edges) {
-    edge.draw();
+    for (const node of nodes) {
+      // draw the node, letting it know if its "clickable"
+      node.draw(nodes[currentNode].edges.includes(node.id));
+    }
   }
 
-  for (const node of nodes) {
-    // draw the node, letting it know if its "clickable"
-    node.draw(nodes[currentNode].edges.includes(node.id));
-  }
   //console.log(accel);
   // console.log(PressNum);
   // maxRadius = 100;
