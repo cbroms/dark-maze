@@ -178,18 +178,18 @@ function setup() {
 
   // initialize the edges
   for (const node of nodes) {
-    for (const edge of node.edges) {
+    for (const ed of node.edges) {
       // if the edge does not already exist
-      if (!edges.some((edge) => edge.id === node.id + nodes[edge]?.id)) {
+      if (!edges.some((edge) => edge.id === node.id + "" + nodes[ed]?.id || edge.id === nodes[ed]?.id + "" + node.id)) {
+        console.log(node.id + "" + nodes[ed].id + " edge added to map");
         // add the new edge
         edges.push(
           new Edge(
             node.x,
             node.y,
-            nodes[edge].x,
-            nodes[edge].y,
-            node.id,
-            nodes[edge].id
+            nodes[ed].x,
+            nodes[ed].y,
+            node.id + "" + nodes[ed].id
           )
         );
       }
