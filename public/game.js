@@ -3,6 +3,9 @@
 
 // the "trail" left behind players. This is a circle that reduces in opacity every
 // time it's drawn, reduced by a pre-specified amount
+
+
+
 class Trail {
   constructor(x, y, opacity, decAmt) {
     this.x = x;
@@ -82,9 +85,11 @@ class Node {
     } else {
       noStroke();
     }
+    image
     //rect is a way to keep the red and black outlines bordering the server icons (stroke won't work with images)
     rect(this.x - 30, this.y -30, 60, 60);
     image(serverempty, this.x - 30, this.y - 30);
+    image(ServerImg, this.x-40, this.y-40,80,80);
 
     // draw the players within the node
     // there are four possible positions to draw the players in the node,
@@ -274,10 +279,12 @@ function setup() {
 let img;
 let serverempty;
 let roombackground;
+let ServerImg
 function preload() {
-  img = loadImage("assets/cyberlines.gif");
+  img = loadImage("assets/cyberGreen.gif");
   serverempty = loadImage("assets/serverempty.png");
   roombackground = loadImage("assets/background.png");
+  ServerImg = loadImage("assets/server.gif");
 }
 
 // called every frame
@@ -285,7 +292,7 @@ function draw() {
   background(0);
   image(roombackground, 0, 0);
 
-  // image(img, 10, 10, windowHeight, windowWidth);
+   image(img, 0, 0, 700, 700);
 
   if (edges && nodes) {
     for (const edge of edges) {
