@@ -37,6 +37,7 @@ class Player {
   }
 }
 
+//lines/routes/bridges connecting the servers for the packets to travel through
 class Edge {
   constructor(startX, startY, endX, endY, id) {
     this.startX = startX;
@@ -47,11 +48,11 @@ class Edge {
   }
 
   draw(playerIn) {
-    strokeWeight(6);
+    strokeWeight(4);
     if (playerIn) {
       stroke(255, 0, 0);
     } else {
-      stroke(0);
+      stroke(0,168,0);
     }
 
     line(this.startX, this.startY, this.endX, this.endY);
@@ -75,14 +76,15 @@ class Node {
   }
 
   draw(clickable) {
-    strokeWeight(2);
+    strokeWeight(4);
     if (clickable) {
       stroke("red");
     } else {
-      stroke("black");
+      noStroke();
     }
-    fill(100);
-    circle(this.x, this.y, this.radius);
+    //rect is a way to keep the red and black outlines bordering the server icons (stroke won't work with images)
+    rect(this.x - 30, this.y -30, 60, 60);
+    image(serverempty, this.x - 30, this.y - 30);
 
     // draw the players within the node
     // there are four possible positions to draw the players in the node,
@@ -270,13 +272,18 @@ function setup() {
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
 let img;
+let serverempty;
+let roombackground;
 function preload() {
   img = loadImage("assets/cyberlines.gif");
+  serverempty = loadImage("assets/serverempty.png");
+  roombackground = loadImage("assets/background.png");
 }
 
 // called every frame
 function draw() {
-  background(255);
+  background(0);
+  image(roombackground, 0, 0);
 
   // image(img, 10, 10, windowHeight, windowWidth);
 
