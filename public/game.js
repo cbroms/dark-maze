@@ -20,15 +20,20 @@ class Trail {
 
 // the player itself. It has a position and list of trails that are left behind it.
 class Player {
-  constructor(hasPayload, color) {
-    this.hasPayload = this.hasPayload;
+  constructor(id, hasPayload, isBad, isMe) {
+    this.hasPayload = hasPayload;
+    this.id = id;
     this.radius = 15;
-    this.color = color;
+    this.isMe = isMe;
+    this.isBad = isBad;
+    this.color = isMe ? (isBad ? "red" : "blue") : "black";
   }
 
   draw(x, y) {
-    fill(this.color);
-    circle(x, y, this.radius);
+    if (!this.isBad || this.isMe) {
+      fill(this.color);
+      circle(x, y, this.radius);
+    }
   }
 }
 
@@ -41,9 +46,14 @@ class Edge {
     this.id = id;
   }
 
-  draw() {
+  draw(playerIn) {
     strokeWeight(6);
-    stroke(0);
+    if (playerIn) {
+      stroke(255, 0, 0);
+    } else {
+      stroke(0);
+    }
+
     line(this.startX, this.startY, this.endX, this.endY);
   }
 }
@@ -108,20 +118,20 @@ let currentNode = 0;
 let nodes = [];
 let edges = [];
 
-// initialize the players
-let me = new Player(false, "#877fc1");
-let otherPlayer = new Player(false, "#c1857f");
+// this is where we keep our version of the state and update it when we
+// receive a new one from the server
+let localState = {};
 
-let SpeedOn = false;
-var accel = 1;
-var PressNum = 0;
-var radius = 1;
-var prevX = 0;
-var prevY = 0;
+// let SpeedOn = false;
+// var accel = 1;
+// var PressNum = 0;
+// var radius = 1;
+// var prevX = 0;
+// var prevY = 0;
 
-var LinefloatX = 0;
-var lineNum = 0;
-var gRectfloatX;
+// var LinefloatX = 0;
+// var lineNum = 0;
+// var gRectfloatX;
 
 ////////////////////////////////////////////////////////////////////////////////
 // SERVER COMMUNICATION
@@ -137,6 +147,7 @@ function onAction(obj) {
 //connected to the server
 function onConnect() {
   if (socket.id) {
+    console.log(socket.id);
     console.log("Connected to the server");
   }
 }
@@ -182,39 +193,78 @@ function onMap(mapObj) {
         }
       }
     }
-
-    // TODO remove this hard coded shit
-    nodes[0].players = [me];
   }
 }
 
 //a message from the server
 function onState(state) {
   if (socket.id) {
-    console.log("got new state");
+    localState = state;
+
     console.log(state);
+
+    // update the player's positions
+    // we're going to manually go through and check if the positions
+    // need to be changed rather than wiping everything and starting
+    // fresh because we don't want to see a flash where there are no
+    // players rendered
+    for (const player in localState.players) {
+      const playerState = localState.players[player];
+      // update the current node index to hightlight the possible destinations
+      if (
+        player === socket.id &&
+        playerState.moveTimer === 0 &&
+        playerState.coolTimer === 0
+      ) {
+        currentNode = playerState.playerNode;
+      }
+
+      const playerPos = playerState.playerNode;
+
+      // if the player doesn't exist in that node yet, add it
+      if (
+        !nodes[playerPos].players.some((playerObj) => player === playerObj.id)
+      ) {
+        nodes[playerPos].players.push(
+          new Player(player, false, playerState.isBad, player === socket.id)
+        );
+      }
+    }
+
+    for (const i in nodes) {
+      const node = nodes[i];
+      for (const j in node.players) {
+        const playerState = localState.players[node.players[j].id];
+        // if that player isn't in that node anymore, delete it
+        if (
+          playerState === undefined ||
+          playerState.playerNode !== parseInt(i) ||
+          playerState.moveTimer > 0
+        ) {
+          nodes[i].players.splice(j, 1);
+        }
+      }
+    }
   }
 }
 
-let socket;
+let socket = io({
+  autoConnect: true,
+});
+
+//detects a server connection
+socket.on("connect", onConnect);
+socket.on("message", onMessage);
+socket.on("map", onMap);
+socket.on("action", onAction);
+socket.on("state", onState);
+socket.on("disconnect", () => {
+  console.log("disconnecting");
+});
 
 function setup() {
-  socket = io({
-    autoConnect: false,
-  });
-
-  //detects a server connection
-  socket.on("connect", onConnect);
-  socket.on("map", onMap);
-
-  socket.on("action", onAction);
-
-  socket.on("state", onState);
-
-  socket.open();
-
-  // set the canvas size to 1000x800
   createCanvas(1000, 900);
+  frameRate(30);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -226,115 +276,39 @@ function preload() {
 
 // called every frame
 function draw() {
-  // draw the nodes/edges
   background(255);
-  image(img, 10, 10, windowHeight, windowWidth);
-  // for (let i = 0; i < edges.length; i++) {
-  //   edges[i].draw(currentNode === i);
-  // }
+
+  // image(img, 10, 10, windowHeight, windowWidth);
+
   if (edges && nodes) {
     for (const edge of edges) {
-      edge.draw();
+      let playerIn = false;
+
+      // check if any players are currently in that edge
+      for (const player in localState.players) {
+        const playerState = localState.players[player];
+        if (playerState.playerEdge === edge.id && playerState.moveTimer > 0) {
+          playerIn = true;
+        }
+      }
+      edge.draw(playerIn);
     }
 
     for (const node of nodes) {
       // draw the node, letting it know if its "clickable"
-      node.draw(nodes[currentNode].edges.includes(node.id));
+      node.draw(nodes[currentNode]?.edges.includes(node.id));
     }
   }
-
-  //console.log(accel);
-  // console.log(PressNum);
-  // maxRadius = 100;
-  // minRadius = 20;
-  // radiusIncrement = 1;
-  // // Increase/decrease size of light circle
-  // if (accel === 0 || (player.x == prevX && player.y == prevY)) {
-  //   radius += radiusIncrement;
-  //   if (radius > maxRadius) radius = maxRadius;
-  // } else {
-  //   radius -= radiusIncrement;
-  //   if (radius < 20) radius = minRadius;
-  // }
-  // prevX = player.x;
-  // prevY = player.y;
-  // // We draw the circle BEFORE drawing the walls so that it looks like the circle "illuminates"
-  // // any surrounding walls
-  // background(0);
-  // fill(255);
-  // circle(player.x + player.w / 2, player.y + player.h / 2, radius);
-  // // draw all the walls to the canvas
-  // for (const wall of level_map) {
-  //   wall.draw();
-  // }
-  // // draw the player + trails
-  // player.draw(accel);
-  // if ((PressNum) => 1) {
-  //   accel += 0.25;
-  // }
-  // // if (SpeedOn == false) {
-  // //accel = 0;
-  // //}
-  // if (accel > 10) {
-  //   accel = 10;
-  // }
-  // // Player movementd
-  // if (keyIsDown(87)) {
-  //   // W key
-  //   player.updatePosition(0, -accel, level_map);
-  // }
-  // if (keyIsDown(65)) {
-  //   // A key
-  //   player.updatePosition(-accel, 0, level_map);
-  // }
-  // if (keyIsDown(83)) {
-  //   // S key
-  //   player.updatePosition(0, accel, level_map);
-  // }
-  // if (keyIsDown(68)) {
-  //   // D key
-  //   player.updatePosition(accel, 0, level_map);
-  // }
-  // if (!keyIsDown(87) && !keyIsDown(65) && !keyIsDown(83) && !keyIsDown(68)) {
-  //   //SpeedOn = false;
-  //   PressNum = 0;
-  //   accel = 0;
-  // }
 }
 
 function mouseClicked() {
   for (let i = 0; i < nodes.length; i++) {
     if (
-      nodes[currentNode].edges.includes(nodes[i].id) &&
+      nodes[currentNode]?.edges.includes(nodes[i].id) &&
       nodes[i].mouseIsIn()
     ) {
-      nodes[currentNode].players = [];
-      currentNode = i;
-      nodes[currentNode].players = [me];
+      socket.emit("move", i);
+      currentNode = -1;
     }
   }
 }
-
-// function keyPressed() {
-//   // By pressing a kdey(WASD) we call upon the players Update Position to move it.
-//   let keyIndex = -1;
-
-//   //console.log("key: " + code);
-//   switch (
-//     keyCode //switch tells us that thing we want to check for is a key press
-//   ) {
-//     case 68: // case tells us which key
-//       PressNum += 1;
-//       break; // break is like reutrn null, it is the default if it returns with nothing
-//     case 65:
-//       PressNum += 1;
-//       break;
-//     case 87:
-//       PressNum += 1;
-//       break;
-//     case 83:
-//       PressNum += 1;
-//       break;
-//     default:
-//   }
-// }

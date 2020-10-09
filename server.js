@@ -119,7 +119,10 @@ io.on("connection", (socket) => {
   for (var roomID in rooms) {
     var roomState = rooms[roomID];
     // Make sure room isn't full and isn't cleaning up an old game
-    if (Object.keys(roomState.players).length === MAX_PLAYERS || roomState.gameOver === true) {
+    if (
+      Object.keys(roomState.players).length === MAX_PLAYERS ||
+      roomState.gameOver === true
+    ) {
       continue;
     }
     socket.join(roomID);
@@ -143,35 +146,43 @@ io.on("connection", (socket) => {
         socket.id +
         " there are now " +
         Object.keys(roomState.players).length +
-        " players in " + roomID
+        " players in " +
+        roomID
     );
 
     // send the map info to the client
-    socket.emit("map", {mapNodes: mapNodes, positions: positions, edges: edges});
+    socket.emit("map", {
+      mapNodes: mapNodes,
+      positions: positions,
+      edges: edges,
+    });
 
     // Start the game when we have 4 players
     if (Object.keys(roomState.players).length === MAX_PLAYERS) {
       startGame(roomID);
     }
+    currRoomID = roomID;
     break;
   } // End rooms for loop
 
   // No rooms open, kick player out
   //TODO: show some UI text?
-  if (currRoomID === "" || rooms.includes(currRoomID) === false) {
-    socket.emit("Sorry, this game is currently full");
+
+  if (currRoomID === "" || Object.keys(rooms).includes(currRoomID) === false) {
+    // socket.emit("Sorry, this game is currently full");
+    socket.emit("message", "Sorry, this game is currently full");
     socket.disconnect(true);
   }
 
   // Define state variable for this current room
   var state = rooms[currRoomID];
 
-  socket.on("message", function (obj) {
+  socket.on("message", function(obj) {
     //do something with a message
   });
 
   // Handle user requests here
-  socket.on("move", function (node) {
+  socket.on("move", function(node) {
     var playerState = state.players[socket.id];
     // If player is currently moving or on cooldown, nothing happens
     if (playerState.moveTimer > 0 || playerState.coolTimer > 0) {
@@ -182,15 +193,14 @@ io.on("connection", (socket) => {
     // if (!(mapNodes[playerState.playerNode].includes(node) === true)) {
     //   return;
     // }
-
     // Figure out the edgeID of the edge we are moving on
     var currEdge = "";
-    for (var edge in edges) {
-      if (edge === (node + "" + playerState.playerNode)) {
-        currEdge = (node + "" + playerState.playerNode);
+    for (var edge of edges) {
+      if (edge === node + "" + playerState.playerNode) {
+        currEdge = node + "" + playerState.playerNode;
         break;
-      } else if (edge === (playerState.playerNode + "" + node)) {
-        currEdge = (playerState.playerNode + "" + node);
+      } else if (edge === playerState.playerNode + "" + node) {
+        currEdge = playerState.playerNode + "" + node;
         break;
       }
     }
@@ -202,14 +212,14 @@ io.on("connection", (socket) => {
   });
 
   // If some player on same node as "IT"
-  socket.on("badPlayerNode", function (obj) {
+  socket.on("badPlayerNode", function(obj) {
     // just mark the player as not-carrying and spawn a new payload
     state.players[socket.id].hasPayload = false;
     generatePayloads(1, state);
   });
 
   // If some player on same node as a payload
-  socket.on("getPayload", function (obj) {
+  socket.on("getPayload", function(obj) {
     // If they're carrying a payload, do nothing
     // (checked on client side) If on same node as "it", do nothing
     if (state.players[socket.id].hasPayload === true) return;
@@ -218,7 +228,7 @@ io.on("connection", (socket) => {
 
   //TODO: for now, it doesn't seem to detect disconnect?
   // If player disconnects from room
-  socket.on('disconnect', function () {
+  socket.on("disconnect", function() {
     console.log("Player has left " + currRoomID);
     delete state.players[socket.id];
     // Reset room for new game once all players have left
@@ -231,7 +241,7 @@ io.on("connection", (socket) => {
 }); // end onConnect
 
 // setInterval works in milliseconds
-setInterval(function () {
+setInterval(function() {
   for (var roomID in rooms) {
     var state = rooms[roomID];
 
@@ -252,7 +262,11 @@ setInterval(function () {
       }
 
       // Check if player on same node as payload_node and if so add
-      if (playerState.moveTimer <= 0 && playerState.hasPayload && playerNode === PAYLOAD_NODE) {
+      if (
+        playerState.moveTimer <= 0 &&
+        playerState.hasPayload &&
+        playerState.playerNode === PAYLOAD_NODE
+      ) {
         state.payloads_brought++;
         if (state.payloads_brought === WIN_PAYLOADS) {
           endGame(roomID);
@@ -265,7 +279,6 @@ setInterval(function () {
     else if (state.gameTimer === 0) {
       endGame(roomID);
     }
-
     // Send the state to all players in this room
     io.to(roomID).emit("state", state);
   }
@@ -273,15 +286,15 @@ setInterval(function () {
 
 function endGame(roomID) {
   var state = rooms[roomID];
-  if(state.gameOver === true) return; // don't allow duplicate calls
+  if (state.gameOver === true) return; // don't allow duplicate calls
   console.log("Game end in " + roomID);
   // prevent any further user actions
   state.gameOver = true;
   state.gameTimer = -1;
 
   // TODO: display winner text on client side
-    // winner = state.payloads_brought === WIN_PAYLOADS ? "Good" : "Bad";
-    // winnerText = winner + " team won!";
+  // winner = state.payloads_brought === WIN_PAYLOADS ? "Good" : "Bad";
+  // winnerText = winner + " team won!";
 }
 
 function startGame(roomID) {
@@ -311,7 +324,7 @@ function generatePayloads(numberToAdd, state) {
     // Keep looking for an empty node on the map
     while (!foundPayload) {
       // Random number between 0 and mapNodes.length-1 (inclusive)
-      let j = Math.floor(Math.random() * (mapNodes.length));
+      let j = Math.floor(Math.random() * mapNodes.length);
       // shouldn't be the node we bring payloads to
       if (j === PAYLOAD_NODE) continue;
 
