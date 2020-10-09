@@ -263,7 +263,7 @@ socket.on("disconnect", () => {
 });
 
 function setup() {
-  createCanvas(1000, 900);
+  createCanvas(700, 700);
   frameRate(30);
 }
 
