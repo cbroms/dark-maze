@@ -281,7 +281,7 @@ let serverempty;
 let roombackground;
 let ServerImg
 function preload() {
-  img = loadImage("assets/cyberGreen.gif");
+  img = loadImage("assets/GreenLine.gif");
   serverempty = loadImage("assets/serverempty.png");
   roombackground = loadImage("assets/background.png");
   ServerImg = loadImage("assets/server.gif");
