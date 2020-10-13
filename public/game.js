@@ -6,6 +6,23 @@
 
 
 
+let img;
+let serverempty;
+let roombackground;
+let ServerImg;
+let GreenPl;
+let BluePl;
+let RedPl;
+function preload() {
+  img = loadImage("assets/GreenLine.gif");
+  serverempty = loadImage("assets/serverempty.png");
+  roombackground = loadImage("assets/background.png");
+  ServerImg = loadImage("assets/server.gif");
+  RedPl = loadImage("assets/SmileRed.gif");
+  BluePl = loadImage("assets/SmileBlue.gif");
+  GreenPl = loadImage("assets/SmileGreen.gif");
+}
+
 class Trail {
   constructor(x, y, opacity, decAmt) {
     this.x = x;
@@ -26,16 +43,17 @@ class Player {
   constructor(id, hasPayload, isBad, isMe) {
     this.hasPayload = hasPayload;
     this.id = id;
-    this.radius = 15;
+    this.radius = 20;
     this.isMe = isMe;
     this.isBad = isBad;
-    this.color = isMe ? (isBad ? "red" : "blue") : "black";
+    this.color = isMe ? (isBad ? GreenPl : RedPl) : BluePl;
   }
 
   draw(x, y) {
     if (!this.isBad || this.isMe) {
-      fill(this.color);
-      circle(x, y, this.radius);
+      //fill(this.color);
+      //circle(x, y, this.radius);
+      image(this.color,x+10,y-20,this.radius,this.radius);
     }
   }
 }
@@ -276,16 +294,7 @@ function setup() {
 
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
-let img;
-let serverempty;
-let roombackground;
-let ServerImg
-function preload() {
-  img = loadImage("assets/GreenLine.gif");
-  serverempty = loadImage("assets/serverempty.png");
-  roombackground = loadImage("assets/background.png");
-  ServerImg = loadImage("assets/server.gif");
-}
+
 
 // called every frame
 function draw() {
