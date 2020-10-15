@@ -99,11 +99,23 @@ class Node {
     return (mouseX - this.x) ** 2 + (mouseY - this.y) ** 2 < this.radius ** 2;
   }
 
-  draw(clickable) {
+  draw(clickable, playerOn) {
     strokeWeight(4);
-    if (clickable) {
+    if (clickable || playerOn) {
+      let badOn = false;
+      // is there a bad guy on the current node? if so draw background red
+      if (playerOn) {
+        for (const player of this.players) {
+          if (player.isBad) {
+            badOn = true;
+            break;
+          }
+        }
+      }
+
       // draw the background
-      fill(255);
+      if (badOn) fill(180, 0, 0);
+      else fill(255);
       rect(this.x - 30, this.y - 30, 60, 60);
       // draw the server name
       fill(0);
@@ -337,8 +349,8 @@ function draw() {
     for (const node of nodes) {
       // draw the node, letting it know if its "clickable" or it is the current node
       node.draw(
-        nodes[currentNode]?.edges.includes(node.id) ||
-          nodes[currentNode]?.id === node.id
+        nodes[currentNode]?.edges.includes(node.id),
+        nodes[currentNode]?.id === node.id
       );
     }
   }
