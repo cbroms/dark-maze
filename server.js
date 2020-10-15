@@ -20,13 +20,58 @@ const ROUND_TIMING = 120 * FPS;
 // the map
 // each index represents a node in the network. The array at each index contains
 // the indices that the node has connections to
-mapNodes = [[1, 2], [0, 2], [0, 1, 3], [2]];
+mapNodes = [
+  [4, 5, 1], // 1
+  [5, 6, 2, 0], // 2
+  [6, 1, 3], // 3
+  [2, 6, 9], // 4
+  [10, 0, 5, 7], // 5
+  [0, 1, 6, 8, 11, 4], // 6
+  [1, 5, 2, 3, 9], // 7
+  [4, 10, 11], // 8
+  [5, 11, 9], // 9
+  [6, 8, 11, 13, 14, 3], // 10
+  [4, 7, 11, 12], // 11
+  [10, 7, 5, 8, 9, 12, 15], // 12
+  [10, 11, 15, 16, 17], // 13
+  [15, 9, 20], // 14
+  [9, 20], // 15
+  [11, 12, 17, 19, 13], // 16
+  [21, 12, 17], //  17
+  [15, 12, 16, 21, 22], // 18
+  [23, 19, 22], // 19
+  [15, 18, 20, 23], // 20
+  [19, 13, 14], // 21
+  [16, 17, 23], // 22
+  [21, 17, 18, 23], // 23
+  [22, 18, 19, 20], //
+];
 // the position of each node on the screen
 const positions = [
   { x: 40, y: 50 },
-  { x: 100, y: 500 },
-  { x: 400, y: 600 },
+  { x: 50, y: 200 },
+  { x: 40, y: 500 },
+  { x: 60, y: 600 },
+  { x: 200, y: 80 },
+  { x: 300, y: 280 },
+  { x: 300, y: 500 },
   { x: 500, y: 200 },
+  { x: 480, y: 450 },
+  { x: 550, y: 600 },
+  { x: 600, y: 70 },
+  { x: 600, y: 350 },
+  { x: 720, y: 100 },
+  { x: 750, y: 450 },
+  { x: 750, y: 650 },
+  { x: 850, y: 350 },
+  { x: 900, y: 100 },
+  { x: 1000, y: 200 },
+  { x: 1000, y: 380 },
+  { x: 950, y: 500 },
+  { x: 1000, y: 650 },
+  { x: 1100, y: 100 },
+  { x: 1100, y: 350 },
+  { x: 1100, y: 600 },
 ];
 
 // initializes edges list of edgeID's
@@ -36,9 +81,9 @@ for (let i = 0; i < mapNodes.length; i++) {
   var currEdges = mapNodes[i];
   for (let j = 0; j < currEdges.length; j++) {
     let k = currEdges[j];
-    if (!edges.includes(k + "" + i) && !edges.includes(i + "" + k)) {
-      edges.push(i + "" + k);
-      console.log(i + "" + k + " edge added to server");
+    if (!edges.includes(k + "_" + i) && !edges.includes(i + "_" + k)) {
+      edges.push(i + "_" + k);
+      console.log(i + "_" + k + " edge added to server");
     }
   }
 }
@@ -177,12 +222,12 @@ io.on("connection", (socket) => {
   // Define state variable for this current room
   var state = rooms[currRoomID];
 
-  socket.on("message", function(obj) {
+  socket.on("message", function (obj) {
     //do something with a message
   });
 
   // Handle user requests here
-  socket.on("move", function(node) {
+  socket.on("move", function (node) {
     var playerState = state.players[socket.id];
     // If player is currently moving or on cooldown, nothing happens
     if (playerState.moveTimer > 0 || playerState.coolTimer > 0) {
@@ -196,11 +241,11 @@ io.on("connection", (socket) => {
     // Figure out the edgeID of the edge we are moving on
     var currEdge = "";
     for (var edge of edges) {
-      if (edge === node + "" + playerState.playerNode) {
-        currEdge = node + "" + playerState.playerNode;
+      if (edge === node + "_" + playerState.playerNode) {
+        currEdge = node + "_" + playerState.playerNode;
         break;
-      } else if (edge === playerState.playerNode + "" + node) {
-        currEdge = playerState.playerNode + "" + node;
+      } else if (edge === playerState.playerNode + "_" + node) {
+        currEdge = playerState.playerNode + "_" + node;
         break;
       }
     }
@@ -212,14 +257,14 @@ io.on("connection", (socket) => {
   });
 
   // If some player on same node as "IT"
-  socket.on("badPlayerNode", function(obj) {
+  socket.on("badPlayerNode", function (obj) {
     // just mark the player as not-carrying and spawn a new payload
     state.players[socket.id].hasPayload = false;
     generatePayloads(1, state);
   });
 
   // If some player on same node as a payload
-  socket.on("getPayload", function(obj) {
+  socket.on("getPayload", function (obj) {
     // If they're carrying a payload, do nothing
     // (checked on client side) If on same node as "it", do nothing
     if (state.players[socket.id].hasPayload === true) return;
@@ -228,7 +273,7 @@ io.on("connection", (socket) => {
 
   //TODO: for now, it doesn't seem to detect disconnect?
   // If player disconnects from room
-  socket.on("disconnect", function() {
+  socket.on("disconnect", function () {
     console.log("Player has left " + currRoomID);
     delete state.players[socket.id];
     // Reset room for new game once all players have left
@@ -241,7 +286,7 @@ io.on("connection", (socket) => {
 }); // end onConnect
 
 // setInterval works in milliseconds
-setInterval(function() {
+setInterval(function () {
   for (var roomID in rooms) {
     var state = rooms[roomID];
 

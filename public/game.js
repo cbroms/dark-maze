@@ -4,8 +4,6 @@
 // the "trail" left behind players. This is a circle that reduces in opacity every
 // time it's drawn, reduced by a pre-specified amount
 
-
-
 let img;
 let serverempty;
 let roombackground;
@@ -53,7 +51,7 @@ class Player {
     if (!this.isBad || this.isMe) {
       //fill(this.color);
       //circle(x, y, this.radius);
-      image(this.color,x+10,y-20,this.radius,this.radius);
+      image(this.color, x + 10, y - 20, this.radius, this.radius);
     }
   }
 }
@@ -68,12 +66,16 @@ class Edge {
     this.id = id;
   }
 
-  draw(playerIn) {
+  draw(playerIn, visibleToPlayer, barelyVisibleToPlayer) {
     strokeWeight(4);
     if (playerIn) {
       stroke(255, 0, 0);
+    } else if (visibleToPlayer) {
+      stroke(0, 168, 0);
+    } else if (barelyVisibleToPlayer) {
+      stroke("rgba(0,168,0,0.05)");
     } else {
-      stroke(0,168,0);
+      noStroke();
     }
 
     line(this.startX, this.startY, this.endX, this.endY);
@@ -84,6 +86,7 @@ class Edge {
 class Node {
   constructor(x, y, id, edges) {
     this.id = id;
+    this.name = String.fromCharCode(id + 65);
     this.edges = edges;
     this.x = x;
     this.y = y;
@@ -99,37 +102,39 @@ class Node {
   draw(clickable) {
     strokeWeight(4);
     if (clickable) {
-      stroke("red");
-    } else {
-      noStroke();
-    }
-    image
-    //rect is a way to keep the red and black outlines bordering the server icons (stroke won't work with images)
-    rect(this.x - 30, this.y -30, 60, 60);
-    image(serverempty, this.x - 30, this.y - 30);
-    image(ServerImg, this.x-40, this.y-40,80,80);
-
-    // draw the players within the node
-    // there are four possible positions to draw the players in the node,
-    // and we want each player to have a unique position so there's no overlap
-    for (let i = 0; i < this.players.length; i++) {
-      const playerRad = (this.players[i].radius / 3) * 2;
-      // just hardcoding the positions, could be tricky here with mod
-      switch (i) {
-        case 0:
-          this.players[i].draw(this.x - playerRad, this.y + playerRad);
-          break;
-        case 1:
-          this.players[i].draw(this.x + playerRad, this.y + playerRad);
-          break;
-        case 2:
-          this.players[i].draw(this.x + playerRad, this.y - playerRad);
-          break;
-        case 3:
-          this.players[i].draw(this.x - playerRad, this.y - playerRad);
-          break;
+      // draw the background
+      fill(255);
+      rect(this.x - 30, this.y - 30, 60, 60);
+      // draw the server name
+      fill(0);
+      text(this.name, this.x - 20, this.y + 10);
+      // draw the players within the node
+      // there are four possible positions to draw the players in the node,
+      // and we want each player to have a unique position so there's no overlap
+      for (let i = 0; i < this.players.length; i++) {
+        const playerRad = (this.players[i].radius / 3) * 2;
+        // just hardcoding the positions, could be tricky here with mod
+        switch (i) {
+          case 0:
+            this.players[i].draw(this.x - playerRad, this.y + playerRad);
+            break;
+          case 1:
+            this.players[i].draw(this.x + playerRad, this.y + playerRad);
+            break;
+          case 2:
+            this.players[i].draw(this.x + playerRad, this.y - playerRad);
+            break;
+          case 3:
+            this.players[i].draw(this.x - playerRad, this.y - playerRad);
+            break;
+        }
       }
+    } else {
+      // don't do anything since the node is invisible to the player
     }
+
+    // image(serverempty, this.x - 30, this.y - 30);
+    // image(ServerImg, this.x - 40, this.y - 40, 80, 80);
   }
 }
 
@@ -204,7 +209,7 @@ function onMap(mapObj) {
               edge.id === nodes[ed]?.id + "" + node.id
           )
         ) {
-          console.log(node.id + "" + nodes[ed].id + " edge added to map");
+          //      console.log(node.id + "" + nodes[ed].id + " edge added to map");
           // add the new edge
           edges.push(
             new Edge(
@@ -212,7 +217,7 @@ function onMap(mapObj) {
               node.y,
               nodes[ed].x,
               nodes[ed].y,
-              node.id + "" + nodes[ed].id
+              node.id + "_" + nodes[ed].id
             )
           );
         }
@@ -226,7 +231,7 @@ function onState(state) {
   if (socket.id) {
     localState = state;
 
-    console.log(state);
+    //console.log(state);
 
     // update the player's positions
     // we're going to manually go through and check if the positions
@@ -288,20 +293,20 @@ socket.on("disconnect", () => {
 });
 
 function setup() {
-  createCanvas(700, 700);
-  frameRate(30);
+  createCanvas(1200, 700);
+  frameRate(20);
+  textSize(32);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
 
-
 // called every frame
 function draw() {
   background(0);
-  image(roombackground, 0, 0);
+  //image(roombackground, 0, 0);
 
-   image(img, 0, 0, 700, 700);
+  //image(img, 0, 0, 700, 700);
 
   if (edges && nodes) {
     for (const edge of edges) {
@@ -314,12 +319,27 @@ function draw() {
           playerIn = true;
         }
       }
-      edge.draw(playerIn);
+
+      const [nodeCon1, nodeCon2] = edge.id.split("_");
+
+      const visible =
+        nodes[currentNode]?.id === parseInt(nodeCon2) ||
+        nodes[currentNode]?.id === parseInt(nodeCon1);
+
+      const barelyVisible =
+        nodes[currentNode]?.edges.includes(parseInt(nodeCon2)) ||
+        nodes[currentNode]?.edges.includes(parseInt(nodeCon1));
+      // draw the node, letting it know if there's a player inside and if
+      // if it is visible to the player
+      edge.draw(playerIn, visible, barelyVisible);
     }
 
     for (const node of nodes) {
-      // draw the node, letting it know if its "clickable"
-      node.draw(nodes[currentNode]?.edges.includes(node.id));
+      // draw the node, letting it know if its "clickable" or it is the current node
+      node.draw(
+        nodes[currentNode]?.edges.includes(node.id) ||
+          nodes[currentNode]?.id === node.id
+      );
     }
   }
 }
@@ -329,6 +349,20 @@ function mouseClicked() {
     if (
       nodes[currentNode]?.edges.includes(nodes[i].id) &&
       nodes[i].mouseIsIn()
+    ) {
+      socket.emit("move", i);
+      currentNode = -1;
+    }
+  }
+}
+
+function keyPressed(key) {
+  const upperKey = key.key.toUpperCase();
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (
+      nodes[currentNode]?.edges.includes(nodes[i].id) &&
+      nodes[i].name === upperKey
     ) {
       socket.emit("move", i);
       currentNode = -1;
