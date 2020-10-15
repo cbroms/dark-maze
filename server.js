@@ -7,7 +7,7 @@ const io = require("socket.io")(http);
 app.use(express.static("public"));
 
 // the rate the server updates all the clients, FPS frames per sec
-const FPS = 1;
+const FPS = 10;
 const UPDATE_TIME = 1000 / FPS;
 const MAX_PLAYERS = 4;
 const MAX_ROOMS = 6;
@@ -74,6 +74,11 @@ const positions = [
   { x: 1100, y: 600 },
 ];
 
+//TODO: define this in a different way
+const MAX_PAYLOADS = mapNodes.length / 2;
+const PAYLOAD_NODE = 0;
+const WIN_PAYLOADS = MAX_PAYLOADS;
+
 // initializes edges list of edgeID's
 // i is the current node, j is the index of edge list, k is adjacent node
 var edges = [];
@@ -99,14 +104,16 @@ for (let i = 0; i < MAX_ROOMS; i++) {
     gameTimer: -1,
     gameOver: false,
   };
+
+  // Initialize payload array to false
+  for (let j = 0; j < mapNodes.length; j++) {
+    state.payloads[j] = false;
+  }
+  generatePayloads(MAX_PAYLOADS, state);
+
   var roomID = "Room " + i;
   rooms[roomID] = state;
 }
-
-//TODO: define this in a different way
-const MAX_PAYLOADS = mapNodes.length / 2;
-const PAYLOAD_NODE = 0;
-const WIN_PAYLOADS = MAX_PAYLOADS;
 
 // for reference
 // var state = {
@@ -163,10 +170,10 @@ io.on("connection", (socket) => {
 
   for (var roomID in rooms) {
     var roomState = rooms[roomID];
-    // Make sure room isn't full and isn't cleaning up an old game
+    // Make sure room isn't full and isn't in-game/cleaning up an old game
     if (
       Object.keys(roomState.players).length === MAX_PLAYERS ||
-      roomState.gameOver === true
+      roomState.gameOver === true || roomState.gameTimer != -1
     ) {
       continue;
     }
@@ -256,28 +263,30 @@ io.on("connection", (socket) => {
     playerState.playerNode = node;
   });
 
-  // If some player on same node as "IT"
-  socket.on("badPlayerNode", function (obj) {
-    // just mark the player as not-carrying and spawn a new payload
-    state.players[socket.id].hasPayload = false;
-    generatePayloads(1, state);
-  });
+  // // If some player on same node as "IT"
+  // socket.on("badPlayerNode", function (obj) {
+  //   // just mark the player as not-carrying and spawn a new payload
+  //   state.players[socket.id].hasPayload = false;
+  //   generatePayloads(1, state);
+  // });
 
-  // If some player on same node as a payload
-  socket.on("getPayload", function (obj) {
-    // If they're carrying a payload, do nothing
-    // (checked on client side) If on same node as "it", do nothing
-    if (state.players[socket.id].hasPayload === true) return;
-    state.players[socket.id].hasPayload = true;
-  });
+  // // If some player on same node as a payload
+  // socket.on("getPayload", function (obj) {
+  //   // If they're carrying a payload, do nothing
+  //   // (checked on client side) If on same node as "it", do nothing
+  //   if (state.players[socket.id].hasPayload === true) return;
+  //   state.players[socket.id].hasPayload = true;
+  // });
 
-  //TODO: for now, it doesn't seem to detect disconnect?
   // If player disconnects from room
   socket.on("disconnect", function () {
     console.log("Player has left " + currRoomID);
     delete state.players[socket.id];
     // Reset room for new game once all players have left
-    if (Object.keys(roomState.players).length === 0) {
+    if (Object.keys(state.players).length === 0) {
+      if (state.gameTimer >= 0) { // force quit current game
+        endGame(currRoomID);
+      }
       state.gameOver = false;
     }
     // const rooms = Object.keys(socket.rooms);
@@ -290,9 +299,35 @@ setInterval(function () {
   for (var roomID in rooms) {
     var state = rooms[roomID];
 
+    var itNode = -1;
+    // Find what node "IT" is on
+    for (var playerId in state.players) {
+      var playerState = state.players[playerId];
+      if (playerState.isBad === true) {
+        itNode = playerState.playerNode;
+        break;
+      }
+    }
+
+    // Issue occurred
+    if (itNode === -1 && state.gameTimer > 0) {
+      console.log("Error occurred, no player is IT");
+    }
+
     // Do processing of game state
     for (var playerId in state.players) {
       var playerState = state.players[playerId];
+
+      //TODO: some UI text for these cases
+      // If player on same node as "IT" and not moving, and is not IT
+      if (playerState.moveTimer <= 0 && playerState.playerNode === itNode && playerState.isBad === false) {
+        playerState.hasPayload = false;
+        generatePayloads(1, state);
+      } else if (playerState.moveTimer <= 0 && state.payloads[playerState.playerNode] === true && playerState.hasPayload === false && playerState.isBad === false) { // Player on same node as a payload and not with "IT", not carrying payload, not moving, and not "it"
+        playerState.hasPayload = true;
+        state.payloads[playerState.playerNode] = false;
+      }
+
       // Cooldown on movement
       if (playerState.coolTimer > 0) {
         playerState.coolTimer -= 1;
