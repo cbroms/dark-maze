@@ -11,6 +11,11 @@ let ServerImg;
 let GreenPl;
 let BluePl;
 let RedPl;
+
+let CanX;
+
+let CanY;
+
 function preload() {
   img = loadImage("assets/GreenLine.gif");
   serverempty = loadImage("assets/serverempty.png");
@@ -116,10 +121,11 @@ class Node {
       // draw the background
       if (badOn) fill(180, 0, 0);
       else fill(255);
-      rect(this.x - 30, this.y - 30, 60, 60);
+      rect(this.x - 0, this.y - 0, 10, 10);
+      image(ServerImg, this.x - 40, this.y - 40, 80, 80);
       // draw the server name
-      fill(0);
-      text(this.name, this.x - 20, this.y + 10);
+      //fill(0);
+      //text(this.name, this.x - 20, this.y + 10);
       // draw the players within the node
       // there are four possible positions to draw the players in the node,
       // and we want each player to have a unique position so there's no overlap
@@ -146,7 +152,7 @@ class Node {
     }
 
     // image(serverempty, this.x - 30, this.y - 30);
-    // image(ServerImg, this.x - 40, this.y - 40, 80, 80);
+    
   }
 }
 
@@ -304,8 +310,11 @@ socket.on("disconnect", () => {
   console.log("disconnecting");
 });
 
-function setup() {
-  createCanvas(1200, 700);
+function setup() 
+{
+  CanX = 1200;
+  CanY = 700;
+  createCanvas(CanX, CanY);
   frameRate(20);
   textSize(32);
 }
@@ -318,7 +327,7 @@ function draw() {
   background(0);
   //image(roombackground, 0, 0);
 
-  //image(img, 0, 0, 700, 700);
+  image(img, 0, 0, CanX, CanY);
 
   if (edges && nodes) {
     for (const edge of edges) {
