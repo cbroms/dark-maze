@@ -17,6 +17,8 @@ const MAX_COOLDOWN = 3 * FPS;
 const MAX_MOVE = 2 * FPS;
 const ROUND_TIMING = 120 * FPS;
 
+const MOVE_TIME = 3000; // 3 seconds
+
 // the map
 // each index represents a node in the network. The array at each index contains
 // the indices that the node has connections to
@@ -173,7 +175,8 @@ io.on("connection", (socket) => {
     // Make sure room isn't full and isn't in-game/cleaning up an old game
     if (
       Object.keys(roomState.players).length === MAX_PLAYERS ||
-      roomState.gameOver === true || roomState.gameTimer != -1
+      roomState.gameOver === true ||
+      roomState.gameTimer != -1
     ) {
       continue;
     }
@@ -184,20 +187,11 @@ io.on("connection", (socket) => {
     let isBadPlayer =
       Object.keys(roomState.players).length === MAX_PLAYERS - 2 ? true : false;
 
-    roomState.players[socket.id] = {
-      playerNode: 0,
-      playerEdge: 0,
-      isBad: isBadPlayer,
-      hasPayload: false,
-      moveTimer: 0, // when player wants to move set to MAX_MOVE
-      coolTimer: 0, // when player finishes a move set to MAX_COOLDOWN
-    };
-
     console.log(
       "Creating player " +
         socket.id +
         " there are now " +
-        Object.keys(roomState.players).length +
+        (Object.keys(roomState.players).length + 1) +
         " players in " +
         roomID
     );
@@ -207,7 +201,25 @@ io.on("connection", (socket) => {
       mapNodes: mapNodes,
       positions: positions,
       edges: edges,
+      players: roomState.players,
+      constants: {
+        MOVE_TIME: MOVE_TIME,
+      },
     });
+
+    // let the other clients know the new player is here
+    io.to(roomID).emit("entered", {
+      player: socket.id,
+      node: 0,
+      bad: isBadPlayer,
+    });
+
+    // add the new player to state
+    roomState.players[socket.id] = {
+      playerNode: 0,
+      isBad: isBadPlayer,
+      hasPayload: false,
+    };
 
     // Start the game when we have 4 players
     if (Object.keys(roomState.players).length === MAX_PLAYERS) {
@@ -229,12 +241,12 @@ io.on("connection", (socket) => {
   // Define state variable for this current room
   var state = rooms[currRoomID];
 
-  socket.on("message", function (obj) {
+  socket.on("message", function(obj) {
     //do something with a message
   });
 
   // Handle user requests here
-  socket.on("move", function (node) {
+  socket.on("move", function(node) {
     var playerState = state.players[socket.id];
     // If player is currently moving or on cooldown, nothing happens
     if (playerState.moveTimer > 0 || playerState.coolTimer > 0) {
@@ -258,8 +270,16 @@ io.on("connection", (socket) => {
     }
 
     if (currEdge === "") return; // no such edge exists
+
+    io.to(roomID).emit("moved", {
+      player: socket.id,
+      edge: currEdge,
+      prevNode: playerState.playerNode,
+      isBad: playerState.isBad,
+      node: node,
+    });
+
     playerState.playerEdge = currEdge;
-    playerState.moveTimer = MAX_MOVE;
     playerState.playerNode = node;
   });
 
@@ -279,90 +299,98 @@ io.on("connection", (socket) => {
   // });
 
   // If player disconnects from room
-  socket.on("disconnect", function () {
+  socket.on("disconnect", function() {
     console.log("Player has left " + currRoomID);
+
+    const playerState = state.players[socket.id];
+
+    io.to(roomID).emit("exited", {
+      player: socket.id,
+      edge: playerState.playerEdge,
+      node: playerState.playerNode,
+    });
+
     delete state.players[socket.id];
     // Reset room for new game once all players have left
     if (Object.keys(state.players).length === 0) {
-      if (state.gameTimer >= 0) { // force quit current game
+      if (state.gameTimer >= 0) {
+        // force quit current game
         endGame(currRoomID);
       }
       state.gameOver = false;
     }
-    // const rooms = Object.keys(socket.rooms);
-    // the rooms array contains at least the socket ID + room it was in
   });
 }); // end onConnect
 
 // setInterval works in milliseconds
-setInterval(function () {
-  for (var roomID in rooms) {
-    var state = rooms[roomID];
+// setInterval(function () {
+//   for (var roomID in rooms) {
+//     var state = rooms[roomID];
 
-    var itNode = -1;
-    // Find what node "IT" is on
-    for (var playerId in state.players) {
-      var playerState = state.players[playerId];
-      if (playerState.isBad === true) {
-        itNode = playerState.playerNode;
-        break;
-      }
-    }
+//     var itNode = -1;
+//     // Find what node "IT" is on
+//     for (var playerId in state.players) {
+//       var playerState = state.players[playerId];
+//       if (playerState.isBad === true) {
+//         itNode = playerState.playerNode;
+//         break;
+//       }
+//     }
 
-    // Issue occurred
-    if (itNode === -1 && state.gameTimer > 0) {
-      console.log("Error occurred, no player is IT");
-    }
+//     // Issue occurred
+//     if (itNode === -1 && state.gameTimer > 0) {
+//       console.log("Error occurred, no player is IT");
+//     }
 
-    // Do processing of game state
-    for (var playerId in state.players) {
-      var playerState = state.players[playerId];
+//     // Do processing of game state
+//     for (var playerId in state.players) {
+//       var playerState = state.players[playerId];
 
-      //TODO: some UI text for these cases
-      // If player on same node as "IT" and not moving, and is not IT
-      if (playerState.moveTimer <= 0 && playerState.playerNode === itNode && playerState.isBad === false) {
-        playerState.hasPayload = false;
-        generatePayloads(1, state);
-      } else if (playerState.moveTimer <= 0 && state.payloads[playerState.playerNode] === true && playerState.hasPayload === false && playerState.isBad === false) { // Player on same node as a payload and not with "IT", not carrying payload, not moving, and not "it"
-        playerState.hasPayload = true;
-        state.payloads[playerState.playerNode] = false;
-      }
+//       //TODO: some UI text for these cases
+//       // If player on same node as "IT" and not moving, and is not IT
+//       if (playerState.moveTimer <= 0 && playerState.playerNode === itNode && playerState.isBad === false) {
+//         playerState.hasPayload = false;
+//         generatePayloads(1, state);
+//       } else if (playerState.moveTimer <= 0 && state.payloads[playerState.playerNode] === true && playerState.hasPayload === false && playerState.isBad === false) { // Player on same node as a payload and not with "IT", not carrying payload, not moving, and not "it"
+//         playerState.hasPayload = true;
+//         state.payloads[playerState.playerNode] = false;
+//       }
 
-      // Cooldown on movement
-      if (playerState.coolTimer > 0) {
-        playerState.coolTimer -= 1;
-      }
+//       // Cooldown on movement
+//       if (playerState.coolTimer > 0) {
+//         playerState.coolTimer -= 1;
+//       }
 
-      // Player is moving
-      if (playerState.moveTimer > 0) {
-        playerState.moveTimer -= 1;
-        if (playerState.moveTimer === 0) {
-          playerState.coolTimer = MAX_COOLDOWN;
-        }
-      }
+//       // Player is moving
+//       if (playerState.moveTimer > 0) {
+//         playerState.moveTimer -= 1;
+//         if (playerState.moveTimer === 0) {
+//           playerState.coolTimer = MAX_COOLDOWN;
+//         }
+//       }
 
-      // Check if player on same node as payload_node and if so add
-      if (
-        playerState.moveTimer <= 0 &&
-        playerState.hasPayload &&
-        playerState.playerNode === PAYLOAD_NODE
-      ) {
-        state.payloads_brought++;
-        if (state.payloads_brought === WIN_PAYLOADS) {
-          endGame(roomID);
-        }
-      }
-    }
+//       // Check if player on same node as payload_node and if so add
+//       if (
+//         playerState.moveTimer <= 0 &&
+//         playerState.hasPayload &&
+//         playerState.playerNode === PAYLOAD_NODE
+//       ) {
+//         state.payloads_brought++;
+//         if (state.payloads_brought === WIN_PAYLOADS) {
+//           endGame(roomID);
+//         }
+//       }
+//     }
 
-    // if gameTimer is -1 then we haven't started yet, so ignore if timer < 0
-    if (state.gameTimer > 0) state.gameTimer -= 1;
-    else if (state.gameTimer === 0) {
-      endGame(roomID);
-    }
-    // Send the state to all players in this room
-    io.to(roomID).emit("state", state);
-  }
-}, UPDATE_TIME);
+//     // if gameTimer is -1 then we haven't started yet, so ignore if timer < 0
+//     if (state.gameTimer > 0) state.gameTimer -= 1;
+//     else if (state.gameTimer === 0) {
+//       endGame(roomID);
+//     }
+//     // Send the state to all players in this room
+//     //io.to(roomID).emit("state", state);
+//   }
+// }, UPDATE_TIME);
 
 function endGame(roomID) {
   var state = rooms[roomID];

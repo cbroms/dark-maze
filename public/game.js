@@ -69,11 +69,12 @@ class Edge {
     this.endX = endX;
     this.endY = endY;
     this.id = id;
+    this.playerIn = false;
   }
 
-  draw(playerIn, visibleToPlayer, barelyVisibleToPlayer) {
+  draw(visibleToPlayer, barelyVisibleToPlayer) {
     strokeWeight(4);
-    if (playerIn) {
+    if (this.playerIn) {
       stroke(255, 0, 0);
     } else if (visibleToPlayer) {
       stroke(0, 168, 0);
@@ -152,7 +153,6 @@ class Node {
     }
 
     // image(serverempty, this.x - 30, this.y - 30);
-    
   }
 }
 
@@ -164,22 +164,8 @@ let mapNodes;
 let positions;
 let currentNode = 0;
 let nodes = [];
-let edges = [];
-
-// this is where we keep our version of the state and update it when we
-// receive a new one from the server
-let localState = {};
-
-// let SpeedOn = false;
-// var accel = 1;
-// var PressNum = 0;
-// var radius = 1;
-// var prevX = 0;
-// var prevY = 0;
-
-// var LinefloatX = 0;
-// var lineNum = 0;
-// var gRectfloatX;
+let edges = {};
+let constants = {};
 
 ////////////////////////////////////////////////////////////////////////////////
 // SERVER COMMUNICATION
@@ -216,82 +202,71 @@ function onMap(mapObj) {
       return new Node(mapObj.positions[i].x, mapObj.positions[i].y, i, node);
     });
 
-    // initialize the edges
-    for (const node of nodes) {
-      for (const ed of node.edges) {
-        // if the edge does not already exist
-        if (
-          !edges.some(
-            (edge) =>
-              edge.id === node.id + "" + nodes[ed]?.id ||
-              edge.id === nodes[ed]?.id + "" + node.id
-          )
-        ) {
-          //      console.log(node.id + "" + nodes[ed].id + " edge added to map");
-          // add the new edge
-          edges.push(
-            new Edge(
-              node.x,
-              node.y,
-              nodes[ed].x,
-              nodes[ed].y,
-              node.id + "_" + nodes[ed].id
-            )
-          );
-        }
-      }
+    for (const edge of mapObj.edges) {
+      const edgeNodes = edge.split("_");
+      const first = parseInt(edgeNodes[0]);
+      const second = parseInt(edgeNodes[1]);
+
+      edges[edge] = new Edge(
+        nodes[first].x,
+        nodes[first].y,
+        nodes[second].x,
+        nodes[second].y,
+        edge
+      );
     }
+
+    // add any existing players to their nodes
+    for (player in mapObj.players) {
+      const playerObj = mapObj.players[player];
+      nodes[playerObj.playerNode].players.push(
+        new Player(player, false, playerObj.isBad, player === socket.id)
+      );
+    }
+
+    // set the local versions of the constants
+    constants = mapObj.constants;
   }
 }
 
-//a message from the server
-function onState(state) {
-  if (socket.id) {
-    localState = state;
-
-    //console.log(state);
-
-    // update the player's positions
-    // we're going to manually go through and check if the positions
-    // need to be changed rather than wiping everything and starting
-    // fresh because we don't want to see a flash where there are no
-    // players rendered
-    for (const player in localState.players) {
-      const playerState = localState.players[player];
-      // update the current node index to hightlight the possible destinations
-      if (
-        player === socket.id &&
-        playerState.moveTimer === 0 &&
-        playerState.coolTimer === 0
-      ) {
-        currentNode = playerState.playerNode;
-      }
-
-      const playerPos = playerState.playerNode;
-
-      // if the player doesn't exist in that node yet, add it
-      if (
-        !nodes[playerPos].players.some((playerObj) => player === playerObj.id)
-      ) {
-        nodes[playerPos].players.push(
-          new Player(player, false, playerState.isBad, player === socket.id)
-        );
-      }
+function onMoved(obj) {
+  console.log("player moved");
+  // remove the player from the previous node
+  for (const j in nodes[obj.prevNode].players) {
+    if (nodes[obj.prevNode].players[j].id === obj.player) {
+      nodes[obj.prevNode].players.splice(j, 1);
     }
+  }
 
-    for (const i in nodes) {
-      const node = nodes[i];
-      for (const j in node.players) {
-        const playerState = localState.players[node.players[j].id];
-        // if that player isn't in that node anymore, delete it
-        if (
-          playerState === undefined ||
-          playerState.playerNode !== parseInt(i) ||
-          playerState.moveTimer > 0
-        ) {
-          nodes[i].players.splice(j, 1);
-        }
-      }
+  // set the edge to render the player inside
+  edges[obj.edge].playerIn = true;
+
+  // after the movement time, adjust the rendering
+  window.setTimeout(() => {
+    // stop the edge from rendering a player inside
+    edges[obj.edge].playerIn = false;
+    // add the player to the destination node
+    nodes[obj.node].players.push(
+      new Player(obj.player, false, obj.player.isBad, obj.player === socket.id)
+    );
+    if (obj.player === socket.id) currentNode = obj.node;
+  }, constants.MOVE_TIME);
+}
+
+function onEntered(obj) {
+  console.log("player entered");
+  // add the player to the map
+  nodes[obj.node].players.push(
+    new Player(obj.player, false, obj.isBad, obj.player === socket.id)
+  );
+}
+
+function onExited(obj) {
+  console.log("player exited");
+  // remove the player from the map
+  for (const j in nodes[obj.node].players) {
+    if (nodes[obj.node].players[j].id === obj.player) {
+      nodes[obj.node].players.splice(j, 1);
     }
   }
 }
@@ -305,13 +280,14 @@ socket.on("connect", onConnect);
 socket.on("message", onMessage);
 socket.on("map", onMap);
 socket.on("action", onAction);
-socket.on("state", onState);
+socket.on("entered", onEntered);
+socket.on("moved", onMoved);
+socket.on("exited", onExited);
 socket.on("disconnect", () => {
   console.log("disconnecting");
 });
 
-function setup() 
-{
+function setup() {
   CanX = 1200;
   CanY = 700;
   createCanvas(CanX, CanY);
@@ -330,18 +306,8 @@ function draw() {
   image(img, 0, 0, CanX, CanY);
 
   if (edges && nodes) {
-    for (const edge of edges) {
-      let playerIn = false;
-
-      // check if any players are currently in that edge
-      for (const player in localState.players) {
-        const playerState = localState.players[player];
-        if (playerState.playerEdge === edge.id && playerState.moveTimer > 0) {
-          playerIn = true;
-        }
-      }
-
-      const [nodeCon1, nodeCon2] = edge.id.split("_");
+    for (const edge in edges) {
+      const [nodeCon1, nodeCon2] = edge.split("_");
 
       const visible =
         nodes[currentNode]?.id === parseInt(nodeCon2) ||
@@ -350,9 +316,10 @@ function draw() {
       const barelyVisible =
         nodes[currentNode]?.edges.includes(parseInt(nodeCon2)) ||
         nodes[currentNode]?.edges.includes(parseInt(nodeCon1));
+
       // draw the node, letting it know if there's a player inside and if
       // if it is visible to the player
-      edge.draw(playerIn, visible, barelyVisible);
+      edges[edge].draw(visible, barelyVisible);
     }
 
     for (const node of nodes) {
@@ -377,16 +344,16 @@ function mouseClicked() {
   }
 }
 
-function keyPressed(key) {
-  const upperKey = key.key.toUpperCase();
+// function keyPressed(key) {
+//   const upperKey = key.key.toUpperCase();
 
-  for (let i = 0; i < nodes.length; i++) {
-    if (
-      nodes[currentNode]?.edges.includes(nodes[i].id) &&
-      nodes[i].name === upperKey
-    ) {
-      socket.emit("move", i);
-      currentNode = -1;
-    }
-  }
-}
+//   for (let i = 0; i < nodes.length; i++) {
+//     if (
+//       nodes[currentNode]?.edges.includes(nodes[i].id) &&
+//       nodes[i].name === upperKey
+//     ) {
+//       socket.emit("move", i);
+//       currentNode = -1;
+//     }
+//   }
+// }
