@@ -1,11 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
-// GAME CLASSES
-
-// the "trail" left behind players. This is a circle that reduces in opacity every
-// time it's drawn, reduced by a pre-specified amount
+// GLOBALS
 
 let img;
-let serverempty;
+let serverEmpty;
+let serverTarget;
+let serverPayload;
 let roombackground;
 let ServerImg;
 let GreenPl;
@@ -16,15 +15,29 @@ let CanX;
 
 let CanY;
 
+// map position
+let mapNodes;
+let positions;
+let currentNode = 0;
+let iAmBad = false;
+let nodes = [];
+let edges = {};
+let constants = {};
+
 function preload() {
   img = loadImage("assets/GreenLine.gif");
-  serverempty = loadImage("assets/serverempty.png");
+  serverEmpty = loadImage("assets/serverempty.png");
+  serverTarget = loadImage("assets/servertarget.png");
+  serverPayload = loadImage("assets/serverpayload.png");
   roombackground = loadImage("assets/background.png");
   ServerImg = loadImage("assets/server.gif");
   RedPl = loadImage("assets/SmileRed.gif");
   BluePl = loadImage("assets/SmileBlue.gif");
   GreenPl = loadImage("assets/SmileGreen.gif");
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// GAME CLASSES
 
 class Trail {
   constructor(x, y, opacity, decAmt) {
@@ -41,7 +54,7 @@ class Trail {
   }
 }
 
-// the player itself. It has a position and list of trails that are left behind it.
+// the player itself.
 class Player {
   constructor(id, hasPayload, isBad, isMe) {
     this.hasPayload = hasPayload;
@@ -49,14 +62,16 @@ class Player {
     this.radius = 20;
     this.isMe = isMe;
     this.isBad = isBad;
-    this.color = isMe ? (isBad ? GreenPl : RedPl) : BluePl;
+    this.color = isBad ? RedPl : isMe ? GreenPl : BluePl;
   }
 
   draw(x, y) {
     if (!this.isBad || this.isMe) {
-      //fill(this.color);
-      //circle(x, y, this.radius);
-      image(this.color, x + 10, y - 20, this.radius, this.radius);
+      if (this.hasPayload) {
+        fill(0, 255, 0);
+        circle(x, y, 30);
+      }
+      image(this.color, x - 10, y - 10, this.radius, this.radius);
     }
   }
 }
@@ -69,12 +84,12 @@ class Edge {
     this.endX = endX;
     this.endY = endY;
     this.id = id;
-    this.playerIn = false;
+    this.playerIn = 0;
   }
 
   draw(visibleToPlayer, barelyVisibleToPlayer) {
     strokeWeight(4);
-    if (this.playerIn) {
+    if (this.playerIn > 0) {
       stroke(255, 0, 0);
     } else if (visibleToPlayer) {
       stroke(0, 168, 0);
@@ -90,12 +105,14 @@ class Edge {
 
 // the nodes aka "servers"
 class Node {
-  constructor(x, y, id, edges) {
+  constructor(x, y, id, edges, isTarget, isPayload) {
     this.id = id;
     this.name = String.fromCharCode(id + 65);
     this.edges = edges;
     this.x = x;
     this.y = y;
+    this.isTarget = isTarget;
+    this.isPayload = isPayload;
     this.radius = 60;
     this.players = [];
   }
@@ -109,21 +126,29 @@ class Node {
     strokeWeight(4);
     if (clickable || playerOn) {
       let badOn = false;
-      // is there a bad guy on the current node? if so draw background red
+      // is there a bad guy on the current node?
       if (playerOn) {
         for (const player of this.players) {
           if (player.isBad) {
             badOn = true;
+
             break;
           }
         }
       }
 
       // draw the background
-      if (badOn) fill(180, 0, 0);
-      else fill(255);
-      rect(this.x - 0, this.y - 0, 10, 10);
-      image(ServerImg, this.x - 40, this.y - 40, 80, 80);
+      // if (badOn) fill(180, 0, 0);
+      // else fill(255);
+      // rect(this.x - 0, this.y - 0, 10, 10);
+      if (this.isTarget) {
+        image(serverTarget, this.x - 40, this.y - 40, 80, 80);
+      } else if (this.isPayload) {
+        image(serverPayload, this.x - 40, this.y - 40, 80, 80);
+      } else {
+        image(serverEmpty, this.x - 40, this.y - 40, 80, 80);
+      }
+
       // draw the server name
       //fill(0);
       //text(this.name, this.x - 20, this.y + 10);
@@ -157,17 +182,6 @@ class Node {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// GLOBALS
-
-// map position
-let mapNodes;
-let positions;
-let currentNode = 0;
-let nodes = [];
-let edges = {};
-let constants = {};
-
-////////////////////////////////////////////////////////////////////////////////
 // SERVER COMMUNICATION
 
 //called by the server upon any user action including me
@@ -199,7 +213,15 @@ function onMap(mapObj) {
     console.log(mapObj);
     // initialize the nodes
     nodes = mapObj.mapNodes.map((node, i) => {
-      return new Node(mapObj.positions[i].x, mapObj.positions[i].y, i, node);
+      console.log(i === mapObj.targetNode);
+      return new Node(
+        mapObj.positions[i].x,
+        mapObj.positions[i].y,
+        i,
+        node,
+        i === mapObj.targetNode,
+        mapObj.payloadNodes[i]
+      );
     });
 
     for (const edge of mapObj.edges) {
@@ -220,7 +242,12 @@ function onMap(mapObj) {
     for (player in mapObj.players) {
       const playerObj = mapObj.players[player];
       nodes[playerObj.playerNode].players.push(
-        new Player(player, false, playerObj.isBad, player === socket.id)
+        new Player(
+          player,
+          playerObj.hasPayload,
+          playerObj.isBad,
+          player === socket.id
+        )
       );
     }
 
@@ -230,7 +257,7 @@ function onMap(mapObj) {
 }
 
 function onMoved(obj) {
-  console.log("player moved");
+  console.log("player moved", obj);
   // remove the player from the previous node
   for (const j in nodes[obj.prevNode].players) {
     if (nodes[obj.prevNode].players[j].id === obj.player) {
@@ -238,27 +265,69 @@ function onMoved(obj) {
     }
   }
 
-  // set the edge to render the player inside
-  edges[obj.edge].playerIn = true;
+  if (obj.edge !== null) {
+    // set the edge to render the player inside
+    edges[obj.edge].playerIn += 1;
 
-  // after the movement time, adjust the rendering
-  window.setTimeout(() => {
-    // stop the edge from rendering a player inside
-    edges[obj.edge].playerIn = false;
+    // after the movement time, adjust the rendering
+    window.setTimeout(() => {
+      // stop the edge from rendering a player inside
+      edges[obj.edge].playerIn -= 1;
+      // add the player to the destination node
+      nodes[obj.node].players.push(
+        new Player(
+          obj.player,
+          obj.hasPayload,
+          obj.isBad,
+          obj.player === socket.id
+        )
+      );
+      if (obj.player === socket.id) currentNode = obj.node;
+    }, constants.MOVE_TIME);
+  } else {
+    // the player died
+
     // add the player to the destination node
     nodes[obj.node].players.push(
-      new Player(obj.player, false, obj.player.isBad, obj.player === socket.id)
+      new Player(
+        obj.player,
+        obj.hasPayload,
+        obj.isBad,
+        obj.player === socket.id
+      )
     );
-    if (obj.player === socket.id) currentNode = obj.node;
-  }, constants.MOVE_TIME);
+    if (obj.player === socket.id) {
+      currentNode = obj.node;
+      alert("you entered a server infected by malware and died :(");
+    }
+  }
+}
+
+function onPickedUpPayload(obj) {
+  // set the player to have a payload
+  for (const player of nodes[obj.node].players) {
+    player.hasPayload = true;
+  }
+}
+
+function onDroppedPayload(obj) {
+  // set the player to not have a payload
+  for (const player of nodes[obj.node].players) {
+    player.hasPayload = false;
+  }
 }
 
 function onEntered(obj) {
   console.log("player entered");
+  console.log(obj);
   // add the player to the map
   nodes[obj.node].players.push(
     new Player(obj.player, false, obj.isBad, obj.player === socket.id)
   );
+  if (obj.player === socket.id) {
+    currentNode = obj.node;
+    iAmBad = obj.isBad;
+  }
 }
 
 function onExited(obj) {
@@ -280,9 +349,12 @@ socket.on("connect", onConnect);
 socket.on("message", onMessage);
 socket.on("map", onMap);
 socket.on("action", onAction);
+socket.on("pickedUpPayload", onPickedUpPayload);
+socket.on("droppedPayload", onDroppedPayload);
 socket.on("entered", onEntered);
 socket.on("moved", onMoved);
 socket.on("exited", onExited);
+
 socket.on("disconnect", () => {
   console.log("disconnecting");
 });
@@ -291,7 +363,7 @@ function setup() {
   CanX = 1200;
   CanY = 700;
   createCanvas(CanX, CanY);
-  frameRate(20);
+  frameRate(10);
   textSize(32);
 }
 
@@ -338,8 +410,13 @@ function mouseClicked() {
       nodes[currentNode]?.edges.includes(nodes[i].id) &&
       nodes[i].mouseIsIn()
     ) {
-      socket.emit("move", i);
-      currentNode = -1;
+      // make sure the player is not a bad player if the node is the target or payload node
+      if (iAmBad && (nodes[i].isPayload || nodes[i].isTarget)) {
+        alert("restricted server");
+      } else {
+        socket.emit("move", i);
+        currentNode = -1;
+      }
     }
   }
 }

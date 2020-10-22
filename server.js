@@ -19,6 +19,8 @@ const ROUND_TIMING = 120 * FPS;
 
 const MOVE_TIME = 3000; // 3 seconds
 
+const TARGET_NODE = 11;
+
 // the map
 // each index represents a node in the network. The array at each index contains
 // the indices that the node has connections to
@@ -48,6 +50,10 @@ mapNodes = [
   [21, 17, 18, 23], // 23
   [22, 18, 19, 20], //
 ];
+
+// payload spawn nodes
+const payloadSpawns = [1, 2, 3];
+
 // the position of each node on the screen
 const positions = [
   { x: 40, y: 50 },
@@ -183,9 +189,19 @@ io.on("connection", (socket) => {
     socket.join(roomID);
     socket.emit("message", "welcome to the game");
 
-    // We always set the 3rd player as "bad"
+    // is there already a bad player?
+    let alreadyBad = false;
+    for (const player in roomState.players) {
+      if (roomState.players[player].isBad) {
+        alreadyBad = true;
+        break;
+      }
+    }
+    // We always set the 2nd player as "bad", assuming there isn't already a bad guy
     let isBadPlayer =
-      Object.keys(roomState.players).length === MAX_PLAYERS - 2 ? true : false;
+      Object.keys(roomState.players).length === MAX_PLAYERS - 3 && !alreadyBad
+        ? true
+        : false;
 
     console.log(
       "Creating player " +
@@ -200,6 +216,8 @@ io.on("connection", (socket) => {
     socket.emit("map", {
       mapNodes: mapNodes,
       positions: positions,
+      targetNode: TARGET_NODE,
+      payloadNodes: roomState.payloads,
       edges: edges,
       players: roomState.players,
       constants: {
@@ -210,13 +228,14 @@ io.on("connection", (socket) => {
     // let the other clients know the new player is here
     io.to(roomID).emit("entered", {
       player: socket.id,
-      node: 0,
-      bad: isBadPlayer,
+      node: isBadPlayer ? 12 : 0,
+      isBad: isBadPlayer,
+      hasPayload: false,
     });
 
     // add the new player to state
     roomState.players[socket.id] = {
-      playerNode: 0,
+      playerNode: isBadPlayer ? 12 : 0,
       isBad: isBadPlayer,
       hasPayload: false,
     };
@@ -248,10 +267,6 @@ io.on("connection", (socket) => {
   // Handle user requests here
   socket.on("move", function(node) {
     var playerState = state.players[socket.id];
-    // If player is currently moving or on cooldown, nothing happens
-    if (playerState.moveTimer > 0 || playerState.coolTimer > 0) {
-      return;
-    }
 
     // IF move not valid, do nothing
     // if (!(mapNodes[playerState.playerNode].includes(node) === true)) {
@@ -276,27 +291,83 @@ io.on("connection", (socket) => {
       edge: currEdge,
       prevNode: playerState.playerNode,
       isBad: playerState.isBad,
+      hasPayload: playerState.hasPayload,
       node: node,
     });
 
     playerState.playerEdge = currEdge;
-    playerState.playerNode = node;
+    playerState.playerNode = null;
+    // wait to place that player on the node until after they've moved
+    setTimeout(() => {
+      state.players[socket.id].playerNode = node;
+
+      // if you're a good guy, check if there's a bad guy there
+      if (!state.players[socket.id].isBad) {
+        for (const player in state.players) {
+          if (
+            state.players[player].playerNode === node &&
+            state.players[player].isBad
+          ) {
+            // kill me now lol
+            const playerState = state.players[socket.id];
+
+            console.log("moving to spawn ", socket.id);
+            io.to(roomID).emit("moved", {
+              player: socket.id,
+              edge: null,
+              prevNode: playerState.playerNode,
+              isBad: playerState.isBad,
+              hasPayload: false,
+              node: 0,
+            });
+            playerState.hasPayload = false;
+            playerState.playerNode = 0;
+          }
+        }
+      } else {
+        // if you're the bad guy, kill everyone on the node
+        const killList = [];
+        for (const player in state.players) {
+          if (
+            state.players[player].playerNode === node &&
+            player !== socket.id
+          ) {
+            // kill that player
+            const playerState = state.players[player];
+            console.log("moving to spawn ", player);
+            io.to(roomID).emit("moved", {
+              player: player,
+              edge: null,
+              prevNode: playerState.playerNode,
+              isBad: playerState.isBad,
+              hasPayload: false,
+              node: 0,
+            });
+            playerState.hasPayload = false;
+            playerState.playerNode = 0;
+          }
+        }
+      }
+
+      // if you're the good guy and the node is a payload node, pick up the payload
+      if (!state.players[socket.id].isBad && state.payloads[node]) {
+        io.to(roomID).emit("pickedUpPayload", {
+          player: socket.id,
+          node: node,
+        });
+        state.players[socket.id].hasPayload = true;
+      }
+
+      // if you're the good guy and the node is the payload target, drop it there
+      if (!state.players[socket.id].isBad && node === TARGET_NODE) {
+        io.to(roomID).emit("droppedPayload", {
+          player: socket.id,
+          node: node,
+        });
+        state.players[socket.id].hasPayload = false;
+      }
+    }, MOVE_TIME);
   });
-
-  // // If some player on same node as "IT"
-  // socket.on("badPlayerNode", function (obj) {
-  //   // just mark the player as not-carrying and spawn a new payload
-  //   state.players[socket.id].hasPayload = false;
-  //   generatePayloads(1, state);
-  // });
-
-  // // If some player on same node as a payload
-  // socket.on("getPayload", function (obj) {
-  //   // If they're carrying a payload, do nothing
-  //   // (checked on client side) If on same node as "it", do nothing
-  //   if (state.players[socket.id].hasPayload === true) return;
-  //   state.players[socket.id].hasPayload = true;
-  // });
 
   // If player disconnects from room
   socket.on("disconnect", function() {
@@ -321,76 +392,6 @@ io.on("connection", (socket) => {
     }
   });
 }); // end onConnect
-
-// setInterval works in milliseconds
-// setInterval(function () {
-//   for (var roomID in rooms) {
-//     var state = rooms[roomID];
-
-//     var itNode = -1;
-//     // Find what node "IT" is on
-//     for (var playerId in state.players) {
-//       var playerState = state.players[playerId];
-//       if (playerState.isBad === true) {
-//         itNode = playerState.playerNode;
-//         break;
-//       }
-//     }
-
-//     // Issue occurred
-//     if (itNode === -1 && state.gameTimer > 0) {
-//       console.log("Error occurred, no player is IT");
-//     }
-
-//     // Do processing of game state
-//     for (var playerId in state.players) {
-//       var playerState = state.players[playerId];
-
-//       //TODO: some UI text for these cases
-//       // If player on same node as "IT" and not moving, and is not IT
-//       if (playerState.moveTimer <= 0 && playerState.playerNode === itNode && playerState.isBad === false) {
-//         playerState.hasPayload = false;
-//         generatePayloads(1, state);
-//       } else if (playerState.moveTimer <= 0 && state.payloads[playerState.playerNode] === true && playerState.hasPayload === false && playerState.isBad === false) { // Player on same node as a payload and not with "IT", not carrying payload, not moving, and not "it"
-//         playerState.hasPayload = true;
-//         state.payloads[playerState.playerNode] = false;
-//       }
-
-//       // Cooldown on movement
-//       if (playerState.coolTimer > 0) {
-//         playerState.coolTimer -= 1;
-//       }
-
-//       // Player is moving
-//       if (playerState.moveTimer > 0) {
-//         playerState.moveTimer -= 1;
-//         if (playerState.moveTimer === 0) {
-//           playerState.coolTimer = MAX_COOLDOWN;
-//         }
-//       }
-
-//       // Check if player on same node as payload_node and if so add
-//       if (
-//         playerState.moveTimer <= 0 &&
-//         playerState.hasPayload &&
-//         playerState.playerNode === PAYLOAD_NODE
-//       ) {
-//         state.payloads_brought++;
-//         if (state.payloads_brought === WIN_PAYLOADS) {
-//           endGame(roomID);
-//         }
-//       }
-//     }
-
-//     // if gameTimer is -1 then we haven't started yet, so ignore if timer < 0
-//     if (state.gameTimer > 0) state.gameTimer -= 1;
-//     else if (state.gameTimer === 0) {
-//       endGame(roomID);
-//     }
-//     // Send the state to all players in this room
-//     //io.to(roomID).emit("state", state);
-//   }
-// }, UPDATE_TIME);
 
 function endGame(roomID) {
   var state = rooms[roomID];
@@ -426,24 +427,32 @@ function generatePayloads(numberToAdd, state) {
     console.log("ERROR: invalid input to generatePayloads");
     return;
   }
-  // Initialize payload locations
-  for (let i = 0; i < numberToAdd; i++) {
-    let foundPayload = false;
-    // Keep looking for an empty node on the map
-    while (!foundPayload) {
-      // Random number between 0 and mapNodes.length-1 (inclusive)
-      let j = Math.floor(Math.random() * mapNodes.length);
-      // shouldn't be the node we bring payloads to
-      if (j === PAYLOAD_NODE) continue;
 
-      // Check if we can add the payload
-      if (state.payloads[j] === false) {
-        state.payloads[j] = true;
-        foundPayload = true;
-        break;
-      }
-    }
+  // randomly select n payload locations
+  for (let i = 0; i < numberToAdd; i++) {
+    const node =
+      payloadSpawns[Math.floor(Math.random() * payloadSpawns.length)];
+    state.payloads[node] = true;
   }
+
+  // // Initialize payload locations
+  // for (let i = 0; i < numberToAdd; i++) {
+  //   let foundPayload = false;
+  //   // Keep looking for an empty node on the map
+  //   while (!foundPayload) {
+  //     // Random number between 0 and mapNodes.length-1 (inclusive)
+  //     let j = Math.floor(Math.random() * mapNodes.length);
+  //     // shouldn't be the node we bring payloads to
+  //     if (j === PAYLOAD_NODE) continue;
+
+  //     // Check if we can add the payload
+  //     if (state.payloads[j] === false) {
+  //       state.payloads[j] = true;
+  //       foundPayload = true;
+  //       break;
+  //     }
+  //   }
+  // }
 }
 
 //listen to the port 3000
