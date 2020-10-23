@@ -15,7 +15,7 @@ const MAX_ROOMS = 6;
 // Timer variables: seconds they should be * FPS
 const MAX_COOLDOWN = 3 * FPS;
 const MAX_MOVE = 2 * FPS;
-const ROUND_TIMING = 120 * FPS;
+const ROUND_TIMING = 120;
 
 const MOVE_TIME = 3000; // 3 seconds
 
@@ -85,7 +85,7 @@ const positions = [
 //TODO: define this in a different way
 const MAX_PAYLOADS = mapNodes.length / 2;
 const PAYLOAD_NODE = 0;
-const WIN_PAYLOADS = MAX_PAYLOADS;
+const WIN_PAYLOADS = payloadSpawns.length - 1;
 
 // initializes edges list of edgeID's
 // i is the current node, j is the index of edge list, k is adjacent node
@@ -119,7 +119,7 @@ for (let i = 0; i < MAX_ROOMS; i++) {
   }
   generatePayloads(MAX_PAYLOADS, state);
 
-  var roomID = "Room " + i;
+  var roomID = "ROOM #" + i;
   rooms[roomID] = state;
 }
 
@@ -222,6 +222,8 @@ io.on("connection", (socket) => {
       players: roomState.players,
       constants: {
         MOVE_TIME: MOVE_TIME,
+        WIN_PAYLOADS: WIN_PAYLOADS,
+        ROOM_ID: roomID,
       },
     });
 
@@ -269,6 +271,11 @@ io.on("connection", (socket) => {
     var playerState = state.players[socket.id];
 
     // IF move not valid, do nothing
+    if (state.gameTimer <= 0) {
+      return;
+    }
+
+
     // if (!(mapNodes[playerState.playerNode].includes(node) === true)) {
     //   return;
     // }
@@ -360,9 +367,11 @@ io.on("connection", (socket) => {
 
       // if you're the good guy and the node is the payload target, drop it there
       if (!state.players[socket.id].isBad && node === TARGET_NODE) {
+        state.payloads_brought++;
         io.to(roomID).emit("droppedPayload", {
           player: socket.id,
           node: node,
+          payloads_brought: state.payloads_brought
         });
         state.players[socket.id].hasPayload = false;
       }
@@ -392,6 +401,21 @@ io.on("connection", (socket) => {
     }
   });
 }); // end onConnect
+
+
+// Round timer sent every second
+setInterval(function () {
+  for (var roomID in rooms) {
+    var roomState = rooms[roomID];
+    if (roomState.gameTimer > 0) {
+      roomState.gameTimer -= 1;
+      io.to(roomID).emit("gameTimer", { time: roomState.gameTimer });
+      if (roomState.gameTimer === 0) {
+        endGame(roomID);
+      }
+    }
+  }
+}, 1000);
 
 function endGame(roomID) {
   var state = rooms[roomID];

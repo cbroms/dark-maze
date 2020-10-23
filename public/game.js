@@ -14,7 +14,7 @@ let CanX;
 
 let CanY;
 
-let timer = 30
+let timer = -1
 
 // map position
 let mapNodes;
@@ -24,6 +24,9 @@ let iAmBad = false;
 let nodes = [];
 let edges = {};
 let constants = {};
+let gameOver = false;
+let gameStart = false;
+let payloadsInCenter = 0;
 
 function preload() {
   BGImg = loadImage("assets/background.gif");
@@ -315,6 +318,7 @@ function onDroppedPayload(obj) {
   for (const player of nodes[obj.node].players) {
     player.hasPayload = false;
   }
+  payloadsInCenter = obj.payloads_brought;
 }
 
 function onEntered(obj) {
@@ -340,6 +344,10 @@ function onExited(obj) {
   }
 }
 
+function onGameTimer(obj) {
+  timer = obj.time;
+}
+
 let socket = io({
   autoConnect: true,
 });
@@ -354,6 +362,7 @@ socket.on("droppedPayload", onDroppedPayload);
 socket.on("entered", onEntered);
 socket.on("moved", onMoved);
 socket.on("exited", onExited);
+socket.on("gameTimer", onGameTimer);
 
 socket.on("disconnect", () => {
   console.log("disconnecting");
@@ -372,6 +381,7 @@ function setup() {
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
 
+let hideStartText = 0;
 // called every frame
 function draw() {
   background(0);
@@ -381,20 +391,9 @@ function draw() {
   textFont('Consolas');
   fill(0,168,0);
 
-  text('ROOM #01 - LOCALHOST:3000', 129, 21)
+  text(constants.ROOM_ID + ' - LOCALHOST:3000', 129, 21)
   textSize(16);
   text('DARK-MAZE', 1149, 687);
-  
-  //TIMER
-  textSize(17);
-  fill(255);
-  if (timer >= 10) {
-    text("00:" + timer, 1165, 21);
-  }
-  if (timer < 10) {
-    text('00:0' + timer, 1165, 21);
-    //add code to have red win
-  }
 
   if (edges && nodes) {
     for (const edge in edges) {
@@ -421,6 +420,54 @@ function draw() {
       );
     }
   }
+  // Hacky addition to say you're moving
+  if (currentNode === -1) {
+    textSize(20);
+    text("Uploading to new server...", width/2, height/2);
+  }
+
+  // Payloads brought
+  textSize(17);
+  fill (255);
+  if (gameStart) {
+    text("Payloads: " + payloadsInCenter + "/" + constants.WIN_PAYLOADS, 1000, 21);
+  }
+
+  //TIMER
+  textSize(17);
+  fill(255);
+  if (timer > 0 && !gameStart) { //game just started
+    gameStart = true;
+    hideStartText = timer - 2;
+    textSize(50);
+    text("GAME HAS STARTED", width/2, height/2);
+
+    textSize(17);
+    var extra_zero = timer % 60 < 10 ? "0" : "";
+    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
+  } else if (timer > 0) { // game already started
+
+    if (timer > hideStartText) { // still show start text
+      textSize(50);
+      text("GAME HAS STARTED", width/2, height/2);
+    }
+
+    textSize(17);
+    var extra_zero = timer % 60 < 10 ? "0" : "";
+    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
+  } else if (timer == 0 || gameOver) { //winner
+    gameOver = true;
+    let winner = payloadsInCenter === constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
+    // display winner text
+    textSize(50);
+    text(winner + " won the game!", width/2, height/2);
+  } else if (timer < 0 && !gameOver) { //in lobby
+    textSize(50);
+    text('Waiting for more players to join...', width/2, height/2);
+  }
+
+  // Cooldown text
+  
 }
 
 //TIMER
@@ -431,6 +478,9 @@ function time() {
 }
 
 function mouseClicked() {
+  if (timer <= 0) { // Game already started or ended
+    return;
+  }
   for (let i = 0; i < nodes.length; i++) {
     if (
       nodes[currentNode]?.edges.includes(nodes[i].id) &&
