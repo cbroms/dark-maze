@@ -381,17 +381,18 @@ function draw() {
   textFont('Consolas');
   fill(0,168,0);
 
-  text('ROOM #01 - LOCALHOST:3000', 129, 20)
+  text('ROOM #01 - LOCALHOST:3000', 129, 21)
   textSize(16);
   text('DARK-MAZE', 1149, 687);
   
   //TIMER
   textSize(17);
+  fill(255);
   if (timer >= 10) {
-    text("00:" + timer, 1165, 20);
+    text("00:" + timer, 1165, 21);
   }
   if (timer < 10) {
-    text('00:0' + timer, 1165, 20);
+    text('00:0' + timer, 1165, 21);
     //add code to have red win
   }
 
