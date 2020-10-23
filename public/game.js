@@ -14,6 +14,8 @@ let CanX;
 
 let CanY;
 
+let timer = 30
+
 // map position
 let mapNodes;
 let positions;
@@ -363,6 +365,8 @@ function setup() {
   createCanvas(CanX, CanY);
   frameRate(10);
   textSize(32);
+  //TIMER
+  setInterval(time, 1000);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -372,6 +376,24 @@ function setup() {
 function draw() {
   background(0);
   image(BGImg, 0, 0, CanX, CanY);
+  textAlign(CENTER, CENTER);
+  textSize(17);
+  textFont('Consolas');
+  fill(0,168,0);
+
+  text('ROOM #01 - LOCALHOST:3000', 129, 20)
+  textSize(16);
+  text('DARK-MAZE', 1149, 687);
+  
+  //TIMER
+  textSize(17);
+  if (timer >= 10) {
+    text("00:" + timer, 1165, 20);
+  }
+  if (timer < 10) {
+    text('00:0' + timer, 1165, 20);
+    //add code to have red win
+  }
 
   if (edges && nodes) {
     for (const edge in edges) {
@@ -397,6 +419,13 @@ function draw() {
         nodes[currentNode]?.id === node.id
       );
     }
+  }
+}
+
+//TIMER
+function time() {
+  if (timer > 0) {
+    timer--;
   }
 }
 
