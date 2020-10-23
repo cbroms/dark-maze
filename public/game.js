@@ -430,7 +430,8 @@ function draw() {
   textSize(17);
   fill (255);
   if (gameStart) {
-    text("Payloads: " + payloadsInCenter + "/" + constants.WIN_PAYLOADS, 1000, 21);
+    var payDisplay = payloadsInCenter > constants.WIN_PAYLOADS ? constants.WIN_PAYLOADS: payloadsInCenter;
+    text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 21);
   }
 
   //TIMER
