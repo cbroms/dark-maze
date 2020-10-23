@@ -1,11 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 // GLOBALS
 
-let img;
+let BGImg;
 let serverEmpty;
 let serverTarget;
 let serverPayload;
-let roombackground;
 let ServerImg;
 let GreenPl;
 let BluePl;
@@ -25,11 +24,10 @@ let edges = {};
 let constants = {};
 
 function preload() {
-  img = loadImage("assets/GreenLine.gif");
+  BGImg = loadImage("assets/background.gif");
   serverEmpty = loadImage("assets/serverempty.png");
   serverTarget = loadImage("assets/servertarget.png");
   serverPayload = loadImage("assets/serverpayload.png");
-  roombackground = loadImage("assets/background.png");
   ServerImg = loadImage("assets/server.gif");
   RedPl = loadImage("assets/SmileRed.gif");
   BluePl = loadImage("assets/SmileBlue.gif");
@@ -373,9 +371,7 @@ function setup() {
 // called every frame
 function draw() {
   background(0);
-  //image(roombackground, 0, 0);
-
-  image(img, 0, 0, CanX, CanY);
+  image(BGImg, 0, 0, CanX, CanY);
 
   if (edges && nodes) {
     for (const edge in edges) {
