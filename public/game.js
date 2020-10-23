@@ -436,6 +436,14 @@ function draw() {
   //TIMER
   textSize(17);
   fill(255);
+  
+  
+  if (gameStart && payloadsInCenter >= constants.WIN_PAYLOADS) {
+      socket.emit("endGame", {timer: timer});
+      gameOver = true;
+      timer = -1;
+  }
+  
   if (timer > 0 && !gameStart) { //game just started
     gameStart = true;
     hideStartText = timer - 2;
@@ -455,7 +463,7 @@ function draw() {
     textSize(17);
     var extra_zero = timer % 60 < 10 ? "0" : "";
     text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
-  } else if (timer == 0 || gameOver) { //winner
+  } else if (timer === 0 || gameOver) { //winner
     gameOver = true;
     let winner = payloadsInCenter === constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
     // display winner text

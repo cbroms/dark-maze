@@ -265,6 +265,10 @@ io.on("connection", (socket) => {
   socket.on("message", function(obj) {
     //do something with a message
   });
+  
+  socket.on("endGame", function(obj) {
+      endGame(currRoomID);
+  });
 
   // Handle user requests here
   socket.on("move", function(node) {
