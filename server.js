@@ -85,7 +85,7 @@ const positions = [
 //TODO: define this in a different way
 const MAX_PAYLOADS = mapNodes.length / 2;
 const PAYLOAD_NODE = 0;
-const WIN_PAYLOADS = payloadSpawns.length - 1;
+const WIN_PAYLOADS = 5;
 
 // initializes edges list of edgeID's
 // i is the current node, j is the index of edge list, k is adjacent node
