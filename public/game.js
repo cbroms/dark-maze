@@ -465,7 +465,7 @@ function draw() {
     text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
   } else if (timer === 0 || gameOver) { //winner
     gameOver = true;
-    let winner = payloadsInCenter === constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
+    let winner = payloadsInCenter >= constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
     // display winner text
     textSize(50);
     text(winner + " won the game!", width/2, height/2);
