@@ -375,7 +375,7 @@ function setup() {
   frameRate(10);
   textSize(32);
   //TIMER
-  setInterval(time, 1000);
+  // setInterval(time, 1000);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
