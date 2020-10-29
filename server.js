@@ -20,6 +20,8 @@ const ROUND_TIMING = 120;
 const MOVE_TIME = 3000; // 3 seconds
 
 const TARGET_NODE = 11;
+const MAX_PAYLOADS = 3;
+const WIN_PAYLOADS = 5;
 
 // the map
 // each index represents a node in the network. The array at each index contains
@@ -52,7 +54,7 @@ mapNodes = [
 ];
 
 // payload spawn nodes
-const payloadSpawns = [1, 2, 3];
+const payloadSpawns = [1, 3, 5, 7, 12, 15, 18, 23];
 
 // the position of each node on the screen
 const positions = [
@@ -81,11 +83,6 @@ const positions = [
   { x: 1100, y: 350 },
   { x: 1100, y: 600 },
 ];
-
-//TODO: define this in a different way
-const MAX_PAYLOADS = mapNodes.length / 2;
-const PAYLOAD_NODE = 0;
-const WIN_PAYLOADS = 5;
 
 // initializes edges list of edgeID's
 // i is the current node, j is the index of edge list, k is adjacent node
@@ -456,11 +453,15 @@ function generatePayloads(numberToAdd, state) {
     return;
   }
 
+  // Only add up to the length of payloadSpawns
+  var toAdd = Math.min(numberToAdd, payloadSpawns.length);
+
   // randomly select n payload locations
-  for (let i = 0; i < numberToAdd; i++) {
+  for (let i = 0; i < toAdd; i++) {
     const node =
       payloadSpawns[Math.floor(Math.random() * payloadSpawns.length)];
-    state.payloads[node] = true;
+    if (state.payloads[node] === false) state.payloads[node] = true;
+    else i--; // Retry until we get to a new payload node
   }
 
   // // Initialize payload locations
