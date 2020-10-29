@@ -2,6 +2,7 @@
 // GLOBALS
 
 let BGImg;
+let StillBGImg;
 let serverEmpty;
 let serverTarget;
 let serverPayload;
@@ -36,6 +37,7 @@ let fontMonospace;
 
 function preload() {
   BGImg = loadImage("assets/background.gif");
+  StillBGImg = loadImage("assets/background.png");
   serverEmpty = loadImage("assets/serverempty.png");
   serverTarget = loadImage("assets/servertarget.png");
   serverPayload = loadImage("assets/serverpayload.png");
@@ -450,7 +452,8 @@ let edgeTimer = 0;
 // called every frame
 function draw() {
   background(0);
-  image(BGImg, 0, 0, CanX, CanY);
+  if (currentNode === -1) image(BGImg, 0, 0, CanX, CanY);
+  else image(StillBGImg, 0, 0, CanX, CanY);
   textAlign(CENTER, CENTER);
   textSize(23);
   textFont(fontMonospace);
