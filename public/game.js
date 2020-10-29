@@ -27,6 +27,7 @@ let constants = {};
 let gameOver = false;
 let gameStart = false;
 let payloadsInCenter = 0;
+let fontMonospace;
 
 function preload() {
   BGImg = loadImage("assets/background.gif");
@@ -37,6 +38,7 @@ function preload() {
   RedPl = loadImage("assets/redSkull.gif");
   BluePl = loadImage("assets/SmileBlue.gif");
   GreenPl = loadImage("assets/SmileGreen.gif");
+  fontMonospace = loadFont("assets/VT323-Regular.ttf");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -388,12 +390,12 @@ function draw() {
   background(0);
   image(BGImg, 0, 0, CanX, CanY);
   textAlign(CENTER, CENTER);
-  textSize(17);
-  textFont('Consolas');
+  textSize(23);
+  textFont(fontMonospace);
   fill(0,168,0);
 
-  text(constants.ROOM_ID + ' - LOCALHOST:3000', 129, 21)
-  textSize(16);
+  text(constants.ROOM_ID + ' - LOCALHOST:3000', 129, 17)
+  textSize(23);
   text('DARK-MAZE', 1149, 687);
 
   if (edges && nodes) {
@@ -423,20 +425,20 @@ function draw() {
   }
   // Hacky addition to say you're moving
   if (currentNode === -1) {
-    textSize(20);
+    textSize(28);
     text("Uploading to new server...", width/2, height/2);
   }
 
   // Payloads brought
-  textSize(17);
+  textSize(23);
   fill (255);
   if (gameStart) {
     var payDisplay = payloadsInCenter > constants.WIN_PAYLOADS ? constants.WIN_PAYLOADS: payloadsInCenter;
-    text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 21);
+    text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 17);
   }
 
   //TIMER
-  textSize(17);
+  textSize(23);
   fill(255);
   
   
@@ -449,33 +451,33 @@ function draw() {
   if (timer > 0 && !gameStart) { //game just started
     gameStart = true;
     hideStartText = timer - 2;
-    textSize(50);
+    textSize(56);
     text("GAME HAS STARTED", width/2, height/2);
 
-    textSize(17);
+    textSize(23);
     var extra_zero = timer % 60 < 10 ? "0" : "";
-    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
+    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 17);
   } else if (timer > 0) { // game already started
 
     if (timer > hideStartText) { // still show start text
-      textSize(50);
+      textSize(56);
       text("GAME HAS STARTED", width/2, height/2);
     }
 
-    textSize(17);
+    textSize(23);
     var extra_zero = timer % 60 < 10 ? "0" : "";
-    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 21);
+    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 17);
   } else if (timer === 0 || gameOver) { //winner
     gameOver = true;
     let winner = payloadsInCenter >= constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
     // display winner text
-    textSize(50);
+    textSize(56);
     text(winner + " won the game!", width/2, height/2);
 
-    textSize(17);
-    text("TIME OUT", width/2, 21);
+    textSize(23);
+    text("TIME OUT", width/2, 17);
   } else if (timer < 0 && !gameOver) { //in lobby
-    textSize(50);
+    textSize(56);
     text('Waiting for more players to join...', width/2, height/2);
   }
 
