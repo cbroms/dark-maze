@@ -224,17 +224,25 @@ io.on("connection", (socket) => {
       },
     });
 
+    // Bad spawn in right side of map, good spawns on left side
+    var spawnNode = isBadPlayer? Math.floor(Math.random()*mapNodes.length/2 + mapNodes.length/2) : Math.floor(Math.random()*mapNodes.length/2);
+
+    // I saw weird bugs when players spawn on payload nodes, so avoiding that
+    while (payloadSpawns.includes(spawnNode)) {
+      var spawnNode = isBadPlayer? Math.floor(Math.random()*mapNodes.length/2 + mapNodes.length/2) : Math.floor(Math.random()*mapNodes.length/2);
+    }
+
     // let the other clients know the new player is here
     io.to(roomID).emit("entered", {
       player: socket.id,
-      node: isBadPlayer ? 12 : 0,
+      node: spawnNode,
       isBad: isBadPlayer,
       hasPayload: false,
     });
 
     // add the new player to state
     roomState.players[socket.id] = {
-      playerNode: isBadPlayer ? 12 : 0,
+      playerNode: spawnNode,
       isBad: isBadPlayer,
       hasPayload: false,
     };
@@ -440,11 +448,13 @@ function startGame(roomID) {
   state.gameOver = false;
   state.payloads_brought = 0;
 
+  //TODO: regenerate payloads/bad player on shuffle
+
   // Initialize payload array to false
-  for (let i = 0; i < mapNodes.length; i++) {
-    state.payloads[i] = false;
-  }
-  generatePayloads(MAX_PAYLOADS, state);
+  // for (let i = 0; i < mapNodes.length; i++) {
+  //   state.payloads[i] = false;
+  // }
+  // generatePayloads(MAX_PAYLOADS, state);
 }
 
 function generatePayloads(numberToAdd, state) {

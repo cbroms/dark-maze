@@ -71,7 +71,8 @@ class Player {
   draw(x, y) {
     if (!this.isBad || this.isMe) {
       if (this.hasPayload) {
-        fill(0, 255, 0);
+        if (this.isMe) fill(0, 255, 0);
+        else fill(0, 222, 255);
         circle(x, y, 30);
       }
       image(this.color, x - 10, y - 10, this.radius, this.radius);
@@ -470,6 +471,9 @@ function draw() {
     // display winner text
     textSize(50);
     text(winner + " won the game!", width/2, height/2);
+
+    textSize(17);
+    text("TIME OUT", width/2, 21);
   } else if (timer < 0 && !gameOver) { //in lobby
     textSize(50);
     text('Waiting for more players to join...', width/2, height/2);
