@@ -54,7 +54,8 @@ mapNodes = [
 ];
 
 // payload spawn nodes
-const payloadSpawns = [1, 3, 5, 7, 12, 15, 18, 23];
+// TODO: make sure none are adjacent to the center node!!!
+const payloadSpawns = [1, 3, 4, 6, 11, 14, 18, 23];
 
 // the position of each node on the screen
 const positions = [

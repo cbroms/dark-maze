@@ -426,6 +426,7 @@ function draw() {
   }
   // Hacky addition to say you're moving
   if (currentNode === -1) {
+    fill(255);
     noStroke();
     textSize(28);
     text("Uploading to new server...", width/2, height/2);
