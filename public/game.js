@@ -7,8 +7,11 @@ let serverTarget;
 let serverPayload;
 let ServerImg;
 let GreenPl;
-let BluePl;
+let WhitePl;
 let RedPl;
+
+let GreenPac;
+let WhitePac;
 
 let CanX;
 
@@ -37,9 +40,11 @@ function preload() {
   serverTarget = loadImage("assets/servertarget.png");
   serverPayload = loadImage("assets/serverpayload.png");
   ServerImg = loadImage("assets/server.gif");
-  RedPl = loadImage("assets/redSkull.gif");
-  BluePl = loadImage("assets/angelWhite.gif");
+  RedPl = loadImage("assets/red-Skull.gif");
+  WhitePl = loadImage("assets/angelWhite.gif");
   GreenPl = loadImage("assets/angelGreen.gif");
+  WhitePac = loadImage("assets/angelWhitePac.gif");
+  GreenPac = loadImage("assets/angelGreenPac.gif");
   fontMonospace = loadFont("assets/VT323-Regular.ttf");
 }
 
@@ -69,15 +74,34 @@ class Player {
     this.radius = 20;
     this.isMe = isMe;
     this.isBad = isBad;
-    this.color = isBad ? RedPl : isMe ? GreenPl : BluePl;
+    this.color = isBad ? RedPl : isMe ? GreenPl : WhitePl;
   }
 
   draw(x, y) {
     if (!this.isBad || this.isMe) {
       if (this.hasPayload) {
-        if (this.isMe) fill(0, 255, 0);
-        else fill(0, 222, 255);
-        circle(x, y, 30);
+        if (this.isMe)
+        {
+          if (this.color == GreenPl)
+            {
+            
+              image(GreenPac, x - 10, y - 10, this.radius, this.radius);
+
+            }
+
+            if (this.color == WhitePl)
+            {
+            
+              image(WhitePac, x - 10, y - 10, this.radius, this.radius);
+
+            }
+
+        }
+
+
+        //fill(0, 255, 0);
+        //else fill(0, 222, 255);
+        //circle(x, y, 30);
       }
       image(this.color, x - 10, y - 10, this.radius, this.radius);
     }
