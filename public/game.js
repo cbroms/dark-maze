@@ -36,8 +36,8 @@ function preload() {
   serverPayload = loadImage("assets/serverpayload.png");
   ServerImg = loadImage("assets/server.gif");
   RedPl = loadImage("assets/redSkull.gif");
-  BluePl = loadImage("assets/SmileBlue.gif");
-  GreenPl = loadImage("assets/SmileGreen.gif");
+  BluePl = loadImage("assets/angelWhite.gif");
+  GreenPl = loadImage("assets/angelGreen.gif");
   fontMonospace = loadFont("assets/VT323-Regular.ttf");
 }
 
