@@ -82,20 +82,22 @@ class Player {
       if (this.hasPayload) {
         if (this.isMe)
         {
-          if (this.color == GreenPl)
-            {
+          // if (this.color === GreenPl)
+          //   {
             
               image(GreenPac, x - 10, y - 10, this.radius, this.radius);
 
-            }
+            // }
 
-            if (this.color == WhitePl)
-            {
+            // if (this.color === WhitePl)
+            // {
             
-              image(WhitePac, x - 10, y - 10, this.radius, this.radius);
+            //   image(WhitePac, x - 10, y - 10, this.radius, this.radius);
 
-            }
+            // }
 
+        } else {
+          image(WhitePac, x - 10, y - 10, this.radius, this.radius);
         }
 
 
