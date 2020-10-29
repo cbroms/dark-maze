@@ -457,7 +457,7 @@ function draw() {
     textSize(23);
     var extra_zero = timer % 60 < 10 ? "0" : "";
     text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 17);
-  } else if (timer > 0) { // game already started
+  } else if (timer > 0 && !gameOver) { // game already started
 
     if (timer > hideStartText) { // still show start text
       textSize(56);
@@ -476,6 +476,10 @@ function draw() {
 
     textSize(23);
     text("TIME OUT", width/2, 17);
+
+    // TODO: If we are done with shuffle timer, restart game
+    // gameOver = false;
+    // gameStart = false;
   } else if (timer < 0 && !gameOver) { //in lobby
     textSize(56);
     text('Waiting for more players to join...', width/2, height/2);

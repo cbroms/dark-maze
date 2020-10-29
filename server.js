@@ -249,7 +249,7 @@ io.on("connection", (socket) => {
 
     // Start the game when we have 4 players
     if (Object.keys(roomState.players).length === MAX_PLAYERS) {
-      startGame(roomID);
+      startGame(roomID, false);
     }
     currRoomID = roomID;
     break;
@@ -439,22 +439,38 @@ function endGame(roomID) {
   // winnerText = winner + " team won!";
 }
 
-function startGame(roomID) {
+function startGame(roomID, toShuffle) {
   console.log("Game start in " + roomID);
   var state = rooms[roomID];
-  //TODO: render some "game start" text on the client side/confirmation
-  // show UI text for payloads_brought
+
   state.gameTimer = ROUND_TIMING;
   state.gameOver = false;
   state.payloads_brought = 0;
 
-  //TODO: regenerate payloads/bad player on shuffle
+  //TODO: if shuffling same room's players
+  if (toShuffle) {
+    // pick new bad player
+    var newBad = Math.floor(Math.random() * MAX_PLAYERS);
+    var counter = 0;
+    for (player in state.players) {
+      playerObj = state.players[player];
+      playerObj.isBad = counter === newBad ? true : false;
+      counter++;
 
-  // Initialize payload array to false
-  // for (let i = 0; i < mapNodes.length; i++) {
-  //   state.payloads[i] = false;
-  // }
-  // generatePayloads(MAX_PAYLOADS, state);
+      // update player spawn location to random
+      // set has payload to false
+    }
+    
+    // Set new payloads
+    for (let i = 0; i < mapNodes.length; i++) {
+      state.payloads[i] = false;
+    }
+    generatePayloads(MAX_PAYLOADS, state);
+
+    // Send new info to players: map, players
+    // re-render everything on client side
+
+  }
 }
 
 function generatePayloads(numberToAdd, state) {
