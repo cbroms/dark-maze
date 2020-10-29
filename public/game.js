@@ -17,7 +17,7 @@ let CanX;
 
 let CanY;
 
-let timer = -1
+let timer = -1;
 
 // map position
 let mapNodes;
@@ -78,24 +78,15 @@ class Player {
   draw(x, y) {
     if (!this.isBad || this.isMe) {
       if (this.hasPayload) {
-        if (this.isMe)
-        {
-          if (this.color == GreenPl)
-            {
-            
-              image(GreenPac, x - 10, y - 10, this.radius, this.radius);
+        if (this.isMe) {
+          if (this.color == GreenPl) {
+            image(GreenPac, x - 10, y - 10, this.radius, this.radius);
+          }
 
-            }
-
-            if (this.color == WhitePl)
-            {
-            
-              image(WhitePac, x - 10, y - 10, this.radius, this.radius);
-
-            }
-
+          if (this.color == WhitePl) {
+            image(WhitePac, x - 10, y - 10, this.radius, this.radius);
+          }
         }
-
 
         //fill(0, 255, 0);
         //else fill(0, 222, 255);
@@ -416,12 +407,12 @@ function draw() {
   textAlign(CENTER, CENTER);
   textSize(23);
   textFont(fontMonospace);
-  fill(0,168,0);
+  fill(0, 168, 0);
   noStroke();
 
-  text(constants.ROOM_ID + ' - LOCALHOST:3000', 129, 17)
+  text(constants.ROOM_ID + " - LOCALHOST:3000", 129, 17);
   textSize(23);
-  text('DARK-MAZE', 1149, 683);
+  text("DARK-MAZE", 1149, 683);
 
   if (edges && nodes) {
     for (const edge in edges) {
@@ -453,68 +444,95 @@ function draw() {
     fill(255);
     noStroke();
     textSize(28);
-    text("Uploading to new server...", width/2, height/2);
+    text("Uploading to new server...", width / 2, height / 2);
   }
 
   // Payloads brought
   noStroke();
   textSize(23);
-  fill (255);
+  fill(255);
   if (gameStart) {
-    var payDisplay = payloadsInCenter > constants.WIN_PAYLOADS ? constants.WIN_PAYLOADS: payloadsInCenter;
+    var payDisplay =
+      payloadsInCenter > constants.WIN_PAYLOADS
+        ? constants.WIN_PAYLOADS
+        : payloadsInCenter;
     text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 17);
   }
 
   //TIMER
   textSize(23);
   fill(255);
-  
-  
+
   if (gameStart && payloadsInCenter >= constants.WIN_PAYLOADS) {
-      socket.emit("endGame", {timer: timer});
-      gameOver = true;
-      timer = -1;
+    socket.emit("endGame", { timer: timer });
+    gameOver = true;
+    timer = -1;
+
+    // add the players back to the queue in 2 seconds
+    window.setTimeout(() => {
+      location.reload();
+    }, 2000);
   }
-  
-  if (timer > 0 && !gameStart) { //game just started
+
+  if (timer > 0 && !gameStart) {
+    //game just started
     gameStart = true;
     hideStartText = timer - 2;
     textSize(56);
-    text("GAME HAS STARTED", width/2, height/2);
+    text("GAME HAS STARTED", width / 2, height / 2);
 
     textSize(23);
     var extra_zero = timer % 60 < 10 ? "0" : "";
-    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 17);
-  } else if (timer > 0 && !gameOver) { // game already started
+    text(
+      "0" + Math.floor(timer / 60) + ":" + extra_zero + (timer % 60),
+      width / 2,
+      17
+    );
+  } else if (timer > 0 && !gameOver) {
+    // game already started
 
-    if (timer > hideStartText) { // still show start text
+    if (timer > hideStartText) {
+      // still show start text
       textSize(56);
-      text("GAME HAS STARTED", width/2, height/2);
+      text("GAME HAS STARTED", width / 2, height / 2);
     }
 
     textSize(23);
     var extra_zero = timer % 60 < 10 ? "0" : "";
-    text("0" + Math.floor(timer/60) + ":" + extra_zero + timer % 60, width/2, 17);
-  } else if (timer === 0 || gameOver) { //winner
+    text(
+      "0" + Math.floor(timer / 60) + ":" + extra_zero + (timer % 60),
+      width / 2,
+      17
+    );
+  } else if (timer === 0 || gameOver) {
+    //winner
     gameOver = true;
-    let winner = payloadsInCenter >= constants.WIN_PAYLOADS ? "The antivirus" : "The virus";
+    let winner =
+      payloadsInCenter >= constants.WIN_PAYLOADS
+        ? "The antivirus"
+        : "The virus";
     // display winner text
     textSize(56);
-    text(winner + " won the game!", width/2, height/2);
+    text(winner + " won the game!", width / 2, height / 2);
 
     textSize(23);
-    text("TIME OUT", width/2, 17);
+    text("TIME OUT", width / 2, 17);
+
+    // add the players back to the queue in 2 seconds
+    window.setTimeout(() => {
+      location.reload();
+    }, 2000);
 
     // TODO: If we are done with shuffle timer, restart game
     // gameOver = false;
     // gameStart = false;
-  } else if (timer < 0 && !gameOver) { //in lobby
+  } else if (timer < 0 && !gameOver) {
+    //in lobby
     textSize(56);
-    text('Waiting for more players to join...', width/2, height/2);
+    text("Waiting for more players to join...", width / 2, height / 2);
   }
 
   // Cooldown text
-  
 }
 
 //TIMER
@@ -525,7 +543,8 @@ function time() {
 }
 
 function mouseClicked() {
-  if (timer <= 0) { // Game already started or ended
+  if (timer <= 0) {
+    // Game already started or ended
     return;
   }
   for (let i = 0; i < nodes.length; i++) {

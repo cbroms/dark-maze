@@ -3,29 +3,42 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>p5.js example</title>
+    <title>Dark Network</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=VT323&display=swap"
+      rel="stylesheet"
+    />
     <style>
       body {
+        font-family: "VT323", monospace;
         padding: 0;
         margin: 0;
         background-color: black;
       }
-      canvas {
-        margin: 40px auto;
+      h1 {
+        color: white;
+        font-size: 6rem;
+        margin: 100px auto;
+        text-align: center;
+      }
+      button {
+        font-family: "VT323", monospace;
+        font-size: 2rem;
         display: block;
+        margin: 0 auto;
+        cursor: pointer;
       }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.js"
-      integrity="sha512-rMaqGbYalDaQz0lWNF2L8DHPtf4NW+gSZomExS0LcsNyRS4Rmj21+dt97XfXCZE/E569eX72Bh//Jt1EpStgiA=="
-      crossorigin="anonymous"
-    ></script>
-
-    <script src="game.js"></script>
   </head>
 
   <body>
-    <main></main>
+    <main>
+      <div>
+        <h1>DARK NETWORK</h1>
+        <button onclick="window.location.href = '/network'">
+          Enter the network
+        </button>
+      </div>
+    </main>
   </body>
 </html>

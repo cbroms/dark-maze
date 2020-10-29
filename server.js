@@ -1,10 +1,19 @@
 const express = require("express");
+const path = require("path");
 const app = express();
 const http = require("http").createServer(app);
 const io = require("socket.io")(http);
 
 //when a client connects serve the static files in the public directory
 app.use(express.static("public"));
+
+app.get("/", function(req, res) {
+  res.sendFile(path.join(__dirname + "/public/index.html"));
+});
+
+app.get("/network", function(req, res) {
+  res.sendFile(path.join(__dirname + "/public/game.html"));
+});
 
 // the rate the server updates all the clients, FPS frames per sec
 const FPS = 10;
@@ -99,9 +108,9 @@ for (let i = 0; i < mapNodes.length; i++) {
   }
 }
 
-// Initialize rooms map from Room name to Room's game state
-var rooms = {};
-for (let i = 0; i < MAX_ROOMS; i++) {
+var rooms = [];
+
+function addRoom() {
   // the game state
   var state = {
     players: {},
@@ -117,8 +126,10 @@ for (let i = 0; i < MAX_ROOMS; i++) {
   }
   generatePayloads(MAX_PAYLOADS, state);
 
-  var roomID = "ROOM #" + i;
-  rooms[roomID] = state;
+  rooms.push(state);
+
+  console.log("added room ", rooms.length - 1);
+  return [rooms.length - 1, state];
 }
 
 // for reference
@@ -169,111 +180,117 @@ for (let i = 0; i < MAX_ROOMS; i++) {
 // io.set('heartbeat timeout', 10);
 // io.set('heartbeat interval', 4);
 
+const queue = [];
+
 io.on("connection", (socket) => {
-  console.log("A user connected");
+  console.log("A user connected, adding to queue");
 
-  var currRoomID = "";
+  let state = {};
+  let currRoomID = null;
 
-  for (var roomID in rooms) {
-    var roomState = rooms[roomID];
-    // Make sure room isn't full and isn't in-game/cleaning up an old game
-    if (
-      Object.keys(roomState.players).length === MAX_PLAYERS ||
-      roomState.gameOver === true ||
-      roomState.gameTimer != -1
-    ) {
-      continue;
+  const setRoomId = (id) => {
+    currRoomID = id;
+    state = rooms[currRoomID];
+  };
+
+  queue.push({ socket: socket, setRoomId: setRoomId });
+
+  if (queue.length >= MAX_PLAYERS) {
+    console.log("removing players from queue and starting game");
+
+    // get the first four players from the queue
+    const playersToAdd = queue.slice(0, MAX_PLAYERS);
+    // remove them from the queue
+    for (let i = 0; i < MAX_PLAYERS; i++) {
+      queue.shift();
     }
-    socket.join(roomID);
-    socket.emit("message", "welcome to the game");
 
-    // is there already a bad player?
-    let alreadyBad = false;
-    for (const player in roomState.players) {
-      if (roomState.players[player].isBad) {
-        alreadyBad = true;
-        break;
+    // create a new room
+    const [roomId, roomState] = addRoom();
+
+    // add the users to the room
+    for (let i = 0; i < playersToAdd.length; i++) {
+      const playerSocket = playersToAdd[i].socket;
+
+      playerSocket.join(roomId);
+      playerSocket.emit("message", "welcome to room");
+
+      // set the second to last player to be the bad guy
+      let isBadPlayer = i === MAX_PLAYERS - 2;
+
+      console.log(
+        "Creating player " +
+          playerSocket.id +
+          " there are now " +
+          (i + 1) +
+          " players in " +
+          roomId
+      );
+
+      // send the map info to the client
+      playerSocket.emit("map", {
+        mapNodes: mapNodes,
+        positions: positions,
+        targetNode: TARGET_NODE,
+        payloadNodes: roomState.payloads,
+        edges: edges,
+        players: roomState.players,
+        constants: {
+          MOVE_TIME: MOVE_TIME,
+          WIN_PAYLOADS: WIN_PAYLOADS,
+          ROOM_ID: roomId,
+        },
+      });
+
+      // Bad spawn in right side of map, good spawns on left side
+      var spawnNode = isBadPlayer
+        ? Math.floor(
+            (Math.random() * mapNodes.length) / 2 + mapNodes.length / 2
+          )
+        : Math.floor((Math.random() * mapNodes.length) / 2);
+
+      // I saw weird bugs when players spawn on payload nodes, so avoiding that
+      while (payloadSpawns.includes(spawnNode)) {
+        var spawnNode = isBadPlayer
+          ? Math.floor(
+              (Math.random() * mapNodes.length) / 2 + mapNodes.length / 2
+            )
+          : Math.floor((Math.random() * mapNodes.length) / 2);
       }
+
+      // let the other clients know the new player is here
+      io.to(roomId).emit("entered", {
+        player: playerSocket.id,
+        node: spawnNode,
+        isBad: isBadPlayer,
+        hasPayload: false,
+      });
+
+      // add the new player to state
+      roomState.players[playerSocket.id] = {
+        playerNode: spawnNode,
+        isBad: isBadPlayer,
+        hasPayload: false,
+      };
+
+      // Start the game when we have 4 players
+      if (i === playersToAdd.length - 1) {
+        startGame(roomId, false);
+      }
+
+      // set the player's room id/state vars
+      playersToAdd[i].setRoomId(roomId);
     }
-    // We always set the 2nd player as "bad", assuming there isn't already a bad guy
-    let isBadPlayer =
-      Object.keys(roomState.players).length === MAX_PLAYERS - 3 && !alreadyBad
-        ? true
-        : false;
-
-    console.log(
-      "Creating player " +
-        socket.id +
-        " there are now " +
-        (Object.keys(roomState.players).length + 1) +
-        " players in " +
-        roomID
-    );
-
-    // send the map info to the client
-    socket.emit("map", {
-      mapNodes: mapNodes,
-      positions: positions,
-      targetNode: TARGET_NODE,
-      payloadNodes: roomState.payloads,
-      edges: edges,
-      players: roomState.players,
-      constants: {
-        MOVE_TIME: MOVE_TIME,
-        WIN_PAYLOADS: WIN_PAYLOADS,
-        ROOM_ID: roomID,
-      },
-    });
-
-    // Bad spawn in right side of map, good spawns on left side
-    var spawnNode = isBadPlayer? Math.floor(Math.random()*mapNodes.length/2 + mapNodes.length/2) : Math.floor(Math.random()*mapNodes.length/2);
-
-    // I saw weird bugs when players spawn on payload nodes, so avoiding that
-    while (payloadSpawns.includes(spawnNode)) {
-      var spawnNode = isBadPlayer? Math.floor(Math.random()*mapNodes.length/2 + mapNodes.length/2) : Math.floor(Math.random()*mapNodes.length/2);
-    }
-
-    // let the other clients know the new player is here
-    io.to(roomID).emit("entered", {
-      player: socket.id,
-      node: spawnNode,
-      isBad: isBadPlayer,
-      hasPayload: false,
-    });
-
-    // add the new player to state
-    roomState.players[socket.id] = {
-      playerNode: spawnNode,
-      isBad: isBadPlayer,
-      hasPayload: false,
-    };
-
-    // Start the game when we have 4 players
-    if (Object.keys(roomState.players).length === MAX_PLAYERS) {
-      startGame(roomID, false);
-    }
-    currRoomID = roomID;
-    break;
-  } // End rooms for loop
-
-  // No rooms open, kick player out
-  //TODO: show some UI text?
-
-  if (currRoomID === "" || Object.keys(rooms).includes(currRoomID) === false) {
-    // socket.emit("Sorry, this game is currently full");
-    socket.emit("message", "Sorry, this game is currently full");
-    socket.disconnect(true);
+  } else {
+    socket.emit("message", "you're in the queue!");
   }
-
-  // Define state variable for this current room
-  var state = rooms[currRoomID];
 
   socket.on("message", function(obj) {
     //do something with a message
   });
-  
+
   socket.on("endGame", function(obj) {
-      endGame(currRoomID);
+    endGame(currRoomID);
   });
 
   // Handle user requests here
@@ -284,7 +301,6 @@ io.on("connection", (socket) => {
     if (state.gameTimer <= 0) {
       return;
     }
-
 
     // if (!(mapNodes[playerState.playerNode].includes(node) === true)) {
     //   return;
@@ -303,7 +319,7 @@ io.on("connection", (socket) => {
 
     if (currEdge === "") return; // no such edge exists
 
-    io.to(roomID).emit("moved", {
+    io.to(currRoomID).emit("moved", {
       player: socket.id,
       edge: currEdge,
       prevNode: playerState.playerNode,
@@ -329,7 +345,7 @@ io.on("connection", (socket) => {
             const playerState = state.players[socket.id];
 
             console.log("moving to spawn ", socket.id);
-            io.to(roomID).emit("moved", {
+            io.to(currRoomID).emit("moved", {
               player: socket.id,
               edge: null,
               prevNode: playerState.playerNode,
@@ -352,7 +368,7 @@ io.on("connection", (socket) => {
             // kill that player
             const playerState = state.players[player];
             console.log("moving to spawn ", player);
-            io.to(roomID).emit("moved", {
+            io.to(currRoomID).emit("moved", {
               player: player,
               edge: null,
               prevNode: playerState.playerNode,
@@ -368,7 +384,7 @@ io.on("connection", (socket) => {
 
       // if you're the good guy and the node is a payload node, pick up the payload
       if (!state.players[socket.id].isBad && state.payloads[node]) {
-        io.to(roomID).emit("pickedUpPayload", {
+        io.to(currRoomID).emit("pickedUpPayload", {
           player: socket.id,
           node: node,
         });
@@ -378,10 +394,10 @@ io.on("connection", (socket) => {
       // if you're the good guy and the node is the payload target, drop it there
       if (!state.players[socket.id].isBad && node === TARGET_NODE) {
         state.payloads_brought++;
-        io.to(roomID).emit("droppedPayload", {
+        io.to(currRoomID).emit("droppedPayload", {
           player: socket.id,
           node: node,
-          payloads_brought: state.payloads_brought
+          payloads_brought: state.payloads_brought,
         });
         state.players[socket.id].hasPayload = false;
       }
@@ -392,29 +408,30 @@ io.on("connection", (socket) => {
   socket.on("disconnect", function() {
     console.log("Player has left " + currRoomID);
 
-    const playerState = state.players[socket.id];
+    if (currRoomID !== null) {
+      const playerState = state.players[socket.id];
 
-    io.to(roomID).emit("exited", {
-      player: socket.id,
-      edge: playerState.playerEdge,
-      node: playerState.playerNode,
-    });
+      io.to(currRoomID).emit("exited", {
+        player: socket.id,
+        edge: playerState.playerEdge,
+        node: playerState.playerNode,
+      });
 
-    delete state.players[socket.id];
-    // Reset room for new game once all players have left
-    if (Object.keys(state.players).length === 0) {
-      if (state.gameTimer >= 0) {
-        // force quit current game
-        endGame(currRoomID);
+      delete state.players[socket.id];
+      // Reset room for new game once all players have left
+      if (Object.keys(state.players).length === 0) {
+        if (state.gameTimer >= 0) {
+          // force quit current game
+          endGame(currRoomID);
+        }
+        state.gameOver = false;
       }
-      state.gameOver = false;
     }
   });
 }); // end onConnect
 
-
 // Round timer sent every second
-setInterval(function () {
+setInterval(function() {
   for (var roomID in rooms) {
     var roomState = rooms[roomID];
     if (roomState.gameTimer > 0) {
@@ -461,7 +478,7 @@ function startGame(roomID, toShuffle) {
       // update player spawn location to random
       // set has payload to false
     }
-    
+
     // Set new payloads
     for (let i = 0; i < mapNodes.length; i++) {
       state.payloads[i] = false;
@@ -470,7 +487,6 @@ function startGame(roomID, toShuffle) {
 
     // Send new info to players: map, players
     // re-render everything on client side
-
   }
 }
 
