@@ -393,10 +393,11 @@ function draw() {
   textSize(23);
   textFont(fontMonospace);
   fill(0,168,0);
+  noStroke();
 
   text(constants.ROOM_ID + ' - LOCALHOST:3000', 129, 17)
   textSize(23);
-  text('DARK-MAZE', 1149, 687);
+  text('DARK-MAZE', 1149, 683);
 
   if (edges && nodes) {
     for (const edge in edges) {
@@ -425,11 +426,13 @@ function draw() {
   }
   // Hacky addition to say you're moving
   if (currentNode === -1) {
+    noStroke();
     textSize(28);
     text("Uploading to new server...", width/2, height/2);
   }
 
   // Payloads brought
+  noStroke();
   textSize(23);
   fill (255);
   if (gameStart) {
