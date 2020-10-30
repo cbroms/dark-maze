@@ -459,7 +459,7 @@ let edgeTimer = 0;
 // called every frame
 function draw() {
   background(0);
-  if (currentNode === -1) image(BGImg, 0, 0, CanX, CanY);
+  if (currentNode === -1 || !gameStart) image(BGImg, 0, 0, CanX, CanY);
   else image(StillBGImg, 0, 0, CanX, CanY);
   textAlign(CENTER, CENTER);
   textSize(23);
@@ -569,11 +569,11 @@ function draw() {
     gameOver = true;
     let winner =
       payloadsInCenter >= constants.WIN_PAYLOADS
-        ? "The antivirus"
-        : "The virus";
+        ? "THE PACKETS"
+        : "THE MALWARE";
     // display winner text
     textSize(56);
-    text(winner + " won the game!", width / 2, height / 2);
+    text(winner + " WON THE GAME!", width / 2, height / 2);
 
     textSize(23);
     text("TIME OUT", width / 2, 17);
