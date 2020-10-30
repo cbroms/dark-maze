@@ -14,13 +14,13 @@ let RedPl;
 let GreenPac;
 let WhitePac;
 
-let vid;
-
 let CanX;
 
 let CanY;
 
 let timer = -1;
+
+let BootUpSfx;
 
 // map position
 let mapNodes;
@@ -38,7 +38,9 @@ let payloadsInCenter = 0;
 let fontMonospace;
 
 function preload() {
-  BootUpSfx = loadSound("assets/Bootup.mp3");
+ // BootUpSfx = loadSound('assets/Bootup.mp3');
+
+
   BGImg = loadImage("assets/background.gif");
   StillBGImg = loadImage("assets/background.png");
   serverEmpty = loadImage("assets/serverempty.png");
@@ -329,10 +331,6 @@ function onMoved(obj) {
       destNode = nodes[obj.node];
     }
 
-    if (obj.player === socket.id) {
-      vid.loop();
-    }
-
     // after the movement time, adjust the rendering
     window.setTimeout(() => {
       // stop the edge from rendering a player inside
@@ -350,7 +348,6 @@ function onMoved(obj) {
         currentNode = obj.node;
         currentEdge = -1;
         destNode = null;
-        vid.pause();
       }
     }, constants.MOVE_TIME);
   } else {
@@ -367,7 +364,7 @@ function onMoved(obj) {
     );
     if (obj.player === socket.id) {
       currentNode = obj.node;
-      alert("you entered a server infected by malware and died :(");
+      alert("YOU ENTERED A SERVER INFECTED BY MALWARE AND DIED :(");
     }
   }
 }
@@ -397,6 +394,7 @@ function onEntered(obj) {
   if (obj.player === socket.id) {
     currentNode = obj.node;
     iAmBad = obj.isBad;
+    //BootUpSfx.play();
   }
 }
 
@@ -440,19 +438,9 @@ function setup() {
   createCanvas(CanX, CanY);
   frameRate(10);
   textSize(32);
-
-  vid = createVideo(["assets/Background.mp4"]);
-
-  vid.size(1200, 700);
-  vid.pause();
   //TIMER
   // setInterval(time, 1000);
 }
-
-// function vidLoad() {
-//   vid.loop();
-//   vid.volume(0);
-// }
 
 ////////////////////////////////////////////////////////////////////////////////
 // GAME RENDERING
@@ -461,9 +449,9 @@ let hideStartText = 0;
 let edgeTimer = 0;
 // called every frame
 function draw() {
-  clear();
-  // if (currentNode === -1 || !gameStart) image(BGImg, 0, 0, CanX, CanY);
-  // else image(StillBGImg, 0, 0, CanX, CanY);
+  background(0);
+  if (currentNode === -1 || !gameStart) image(BGImg, 0, 0, CanX, CanY);
+  else image(StillBGImg, 0, 0, CanX, CanY);
   textAlign(CENTER, CENTER);
   textSize(23);
   textFont(fontMonospace);
@@ -473,9 +461,8 @@ function draw() {
   textAlign(LEFT, CENTER);
   text("ROOM #" + constants.ROOM_ID + " - LOCALHOST:3000", 20, 17);
   textAlign(CENTER, CENTER);
-
   textSize(23);
-  text("DARK-NETWORK", 1149, 683);
+  text("DARK-NETWORK", 1130, 683);
 
   if (edges && nodes) {
     if (currentNode === -1) edgeTimer++;
@@ -510,7 +497,7 @@ function draw() {
     fill(255);
     noStroke();
     textSize(28);
-    text("Uploading to new server...", width / 2, height / 2);
+    text("UPLOADING TO NEW SERVER...", width / 2, height / 2);
   }
 
   // Payloads brought
@@ -522,7 +509,6 @@ function draw() {
       payloadsInCenter > constants.WIN_PAYLOADS
         ? constants.WIN_PAYLOADS
         : payloadsInCenter;
-
     textAlign(LEFT, CENTER);
     text("PAYLOADS: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1060, 17);
     textAlign(CENTER, CENTER);
@@ -623,7 +609,7 @@ function mouseClicked() {
     ) {
       // make sure the player is not a bad player if the node is the target or payload node
       if (iAmBad && (nodes[i].isPayload || nodes[i].isTarget)) {
-        alert("restricted server");
+        alert("RESTRICTED SERVER");
       } else {
         socket.emit("move", i);
         currentNode = -1;
