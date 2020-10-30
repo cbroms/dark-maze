@@ -38,8 +38,7 @@ let payloadsInCenter = 0;
 let fontMonospace;
 
 function preload() {
- // BootUpSfx = loadSound('assets/Bootup.mp3');
-
+  // BootUpSfx = loadSound('assets/Bootup.mp3');
 
   BGImg = loadImage("assets/background.gif");
   StillBGImg = loadImage("assets/background.png");
@@ -523,10 +522,7 @@ function draw() {
     gameOver = true;
     timer = -1;
 
-    // add the players back to the queue in 2 seconds
-    window.setTimeout(() => {
-      location.reload();
-    }, 2000);
+    gameOver();
   }
 
   if (timer > 0 && !gameStart) {
@@ -573,10 +569,7 @@ function draw() {
     textSize(23);
     text("TIME OUT", width / 2, 17);
 
-    // add the players back to the queue in 2 seconds
-    window.setTimeout(() => {
-      location.reload();
-    }, 2000);
+    gameOver();
 
     // TODO: If we are done with shuffle timer, restart game
     // gameOver = false;
@@ -588,6 +581,18 @@ function draw() {
   }
 
   // Cooldown text
+}
+
+let set = false;
+
+function gameOver() {
+  // add the players back to the queue in 2 seconds
+  if (!set) {
+    set = true;
+    window.setTimeout(() => {
+      location.reload();
+    }, 5000);
+  }
 }
 
 //TIMER
