@@ -38,6 +38,7 @@ let payloadsInCenter = 0;
 let fontMonospace;
 
 function preload() {
+  BootUpSfx = loadSound("assets/Bootup.mp3");
   BGImg = loadImage("assets/background.gif");
   StillBGImg = loadImage("assets/background.png");
   serverEmpty = loadImage("assets/serverempty.png");
@@ -484,7 +485,10 @@ function draw() {
   fill(0, 168, 0);
   noStroke();
 
-  text(constants.ROOM_ID + " - LOCALHOST:3000", 129, 17);
+  textAlign(LEFT, CENTER);
+  text("ROOM #" + constants.ROOM_ID + " - LOCALHOST:3000", 20, 17);
+  textAlign(CENTER, CENTER);
+
   textSize(23);
   text("DARK-NETWORK", 1149, 683);
 
@@ -533,7 +537,10 @@ function draw() {
       payloadsInCenter > constants.WIN_PAYLOADS
         ? constants.WIN_PAYLOADS
         : payloadsInCenter;
-    text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 17);
+
+    textAlign(LEFT, CENTER);
+    text("PAYLOADS: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1060, 17);
+    textAlign(CENTER, CENTER);
   }
 
   //TIMER
