@@ -38,7 +38,7 @@ let payloadsInCenter = 0;
 let fontMonospace;
 
 function preload() {
- // BootUpSfx = loadSound('assets/Bootup.mp3');
+  BootUpSfx = loadSound('assets/Bootup.mp3');
 
 
   BGImg = loadImage("assets/background.gif");
@@ -270,6 +270,7 @@ function onConnect() {
   if (socket.id) {
     console.log(socket.id);
     console.log("Connected to the server");
+    
   }
 }
 
@@ -409,7 +410,7 @@ function onEntered(obj) {
   if (obj.player === socket.id) {
     currentNode = obj.node;
     iAmBad = obj.isBad;
-    //BootUpSfx.play();
+    
   }
 }
 
@@ -609,6 +610,7 @@ function time() {
 }
 
 function mouseClicked() {
+  
   if (timer <= 0) {
     // Game already started or ended
     return;
