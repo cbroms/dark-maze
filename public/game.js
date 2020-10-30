@@ -376,6 +376,7 @@ function onPickedUpPayload(obj) {
   // set the player to have a payload
   for (const player of nodes[obj.node].players) {
     player.hasPayload = true;
+    alert("YOU OBTAINED A PAYLOAD");
   }
 }
 
@@ -383,6 +384,7 @@ function onDroppedPayload(obj) {
   // set the player to not have a payload
   for (const player of nodes[obj.node].players) {
     player.hasPayload = false;
+    alert("YOU SUCCESSFULLY DELIVERED A PAYLOAD");
   }
   payloadsInCenter = obj.payloads_brought;
 }
