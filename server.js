@@ -406,7 +406,6 @@ io.on("connection", (socket) => {
           node: node,
           payloads_brought: state.payloads_brought,
         });
-        alert("YOU SUCCESSFULLY DELIVERED A PAYLOAD");
         state.players[socket.id].hasPayload = false;
       }
     }, MOVE_TIME);

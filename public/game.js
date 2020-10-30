@@ -36,6 +36,8 @@ let gameOver = false;
 let gameStart = false;
 let payloadsInCenter = 0;
 let fontMonospace;
+var payloadTextTimer = 0;
+var payloadDeliverTextTimer = 0;
 
 function preload() {
   // BootUpSfx = loadSound('assets/Bootup.mp3');
@@ -376,7 +378,11 @@ function onPickedUpPayload(obj) {
   // set the player to have a payload
   for (const player of nodes[obj.node].players) {
     player.hasPayload = true;
-    alert("YOU OBTAINED A PAYLOAD");
+    if (obj.player === socket.id) {
+      // alert("YOU OBTAINED A PAYLOAD");
+      payloadTextTimer = 10 * 2;
+      console.log("GOT PAYLOAD");
+    }
   }
 }
 
@@ -384,7 +390,10 @@ function onDroppedPayload(obj) {
   // set the player to not have a payload
   for (const player of nodes[obj.node].players) {
     player.hasPayload = false;
-    alert("YOU SUCCESSFULLY DELIVERED A PAYLOAD");
+    if (obj.player === socket.id) {
+      payloadDeliverTextTimer = 10*2;
+      // alert("YOU SUCCESSFULLY DELIVERED A PAYLOAD");
+    }
   }
   payloadsInCenter = obj.payloads_brought;
 }
@@ -529,6 +538,21 @@ function draw() {
     timer = -1;
 
     gameOverHandler();
+  }
+
+  if (payloadTextTimer > 0) {
+    textSize(23);
+    textAlign(LEFT, CENTER);
+    text("YOU OBTAINED A PAYLOAD", width / 2, 600);
+    payloadTextTimer--;
+    console.log("got a payload!");
+  }
+
+  if (payloadDeliverTextTimer > 0) {
+    textSize(23);
+    textAlign(LEFT, CENTER);
+    text("YOU SUCCESSFULLY DELIVERED A PAYLOAD", width / 2, 600);
+    payloadDeliverTextTimer--;
   }
 
   if (timer > 0 && !gameStart) {
