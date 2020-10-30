@@ -473,7 +473,9 @@ function draw() {
   fill(0, 168, 0);
   noStroke();
 
-  text("ROOM #" + constants.ROOM_ID + " - LOCALHOST:3000", 160, 17);
+  textAlign(LEFT, CENTER);
+  text("ROOM #" + constants.ROOM_ID + " - LOCALHOST:3000", 20, 17);
+  textAlign(CENTER, CENTER);
   textSize(23);
   text("DARK-NETWORK", 1130, 683);
 
@@ -522,7 +524,9 @@ function draw() {
       payloadsInCenter > constants.WIN_PAYLOADS
         ? constants.WIN_PAYLOADS
         : payloadsInCenter;
-    text("PAYLOADS: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1250, 17);
+    textAlign(LEFT, CENTER);
+    text("PAYLOADS: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1060, 17);
+    textAlign(CENTER, CENTER);
   }
 
   //TIMER
