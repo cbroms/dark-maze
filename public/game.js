@@ -379,7 +379,7 @@ function onMoved(obj) {
     );
     if (obj.player === socket.id) {
       currentNode = obj.node;
-      alert("you entered a server infected by malware and died :(");
+      alert("YOU ENTERED A SERVER INFECTED BY MALWARE AND DIED :(");
     }
   }
 }
@@ -473,9 +473,9 @@ function draw() {
   fill(0, 168, 0);
   noStroke();
 
-  text(constants.ROOM_ID + " - LOCALHOST:3000", 129, 17);
+  text("ROOM #" + constants.ROOM_ID + " - LOCALHOST:3000", 160, 17);
   textSize(23);
-  text("DARK-NETWORK", 1149, 683);
+  text("DARK-NETWORK", 1130, 683);
 
   if (edges && nodes) {
     if (currentNode === -1) edgeTimer++;
@@ -510,7 +510,7 @@ function draw() {
     fill(255);
     noStroke();
     textSize(28);
-    text("Uploading to new server...", width / 2, height / 2);
+    text("UPLOADING TO NEW SERVER...", width / 2, height / 2);
   }
 
   // Payloads brought
@@ -522,7 +522,7 @@ function draw() {
       payloadsInCenter > constants.WIN_PAYLOADS
         ? constants.WIN_PAYLOADS
         : payloadsInCenter;
-    text("Payloads: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1000, 17);
+    text("PAYLOADS: " + payDisplay + "/" + constants.WIN_PAYLOADS, 1250, 17);
   }
 
   //TIMER
@@ -620,7 +620,7 @@ function mouseClicked() {
     ) {
       // make sure the player is not a bad player if the node is the target or payload node
       if (iAmBad && (nodes[i].isPayload || nodes[i].isTarget)) {
-        alert("restricted server");
+        alert("RESTRICTED SERVER");
       } else {
         socket.emit("move", i);
         currentNode = -1;
