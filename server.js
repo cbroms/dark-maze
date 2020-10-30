@@ -392,7 +392,11 @@ io.on("connection", (socket) => {
       }
 
       // if you're the good guy and the node is the payload target, drop it there
-      if (!state.players[socket.id].isBad && node === TARGET_NODE && state.players[socket.id].hasPayload === true) {
+      if (
+        !state.players[socket.id].isBad &&
+        node === TARGET_NODE &&
+        state.players[socket.id].hasPayload === true
+      ) {
         state.payloads_brought++;
         io.to(currRoomID).emit("droppedPayload", {
           player: socket.id,
@@ -406,9 +410,8 @@ io.on("connection", (socket) => {
 
   // If player disconnects from room
   socket.on("disconnect", function() {
-    console.log("Player has left " + currRoomID);
-
     if (currRoomID !== null) {
+      console.log("Player has left " + currRoomID);
       const playerState = state.players[socket.id];
 
       io.to(currRoomID).emit("exited", {
@@ -425,6 +428,14 @@ io.on("connection", (socket) => {
           endGame(currRoomID);
         }
         state.gameOver = false;
+      }
+    } else {
+      // remove the player from the queue
+      for (let i = 0; i < queue.length; i++) {
+        if (queue[i].socket.id === socket.id) {
+          queue.splice(i, 1);
+          console.log("Player has left, removed from queue");
+        }
       }
     }
   });

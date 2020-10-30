@@ -79,35 +79,20 @@ class Player {
     this.radius = 20;
     this.isMe = isMe;
     this.isBad = isBad;
-    this.color = isBad ? RedPl : isMe ? GreenPl : WhitePl;
+    this.color = isBad ? RedPl : isMe ? WhitePl : GreenPl;
   }
 
   draw(x, y) {
     if (!this.isBad || this.isMe) {
       if (this.hasPayload) {
         if (this.isMe) {
-          // if (this.color === GreenPl)
-          //   {
-
-          image(GreenPac, x - 10, y - 10, this.radius, this.radius);
-
-          // }
-
-          // if (this.color === WhitePl)
-          // {
-
-          //   image(WhitePac, x - 10, y - 10, this.radius, this.radius);
-
-          // }
-        } else {
           image(WhitePac, x - 10, y - 10, this.radius, this.radius);
+        } else {
+          image(GreenPac, x - 10, y - 10, this.radius, this.radius);
         }
-
-        //fill(0, 255, 0);
-        //else fill(0, 222, 255);
-        //circle(x, y, 30);
+      } else {
+        image(this.color, x - 10, y - 10, this.radius, this.radius);
       }
-      image(this.color, x - 10, y - 10, this.radius, this.radius);
     }
   }
 }
