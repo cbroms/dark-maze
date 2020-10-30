@@ -23,6 +23,8 @@ let timer = -1;
 let mapNodes;
 let positions;
 let currentNode = 0;
+let currentEdge = -1;
+let destNode = null;
 let iAmBad = false;
 let nodes = [];
 let edges = {};
@@ -79,13 +81,21 @@ class Player {
     if (!this.isBad || this.isMe) {
       if (this.hasPayload) {
         if (this.isMe) {
-          if (this.color == GreenPl) {
-            image(GreenPac, x - 10, y - 10, this.radius, this.radius);
-          }
+          // if (this.color === GreenPl)
+          //   {
 
-          if (this.color == WhitePl) {
-            image(WhitePac, x - 10, y - 10, this.radius, this.radius);
-          }
+          image(GreenPac, x - 10, y - 10, this.radius, this.radius);
+
+          // }
+
+          // if (this.color === WhitePl)
+          // {
+
+          //   image(WhitePac, x - 10, y - 10, this.radius, this.radius);
+
+          // }
+        } else {
+          image(WhitePac, x - 10, y - 10, this.radius, this.radius);
         }
 
         //fill(0, 255, 0);
@@ -108,10 +118,45 @@ class Edge {
     this.playerIn = 0;
   }
 
-  draw(visibleToPlayer, barelyVisibleToPlayer) {
+  draw(visibleToPlayer, barelyVisibleToPlayer, edgeTimer) {
     strokeWeight(4);
     if (this.playerIn > 0) {
-      stroke(255, 0, 0);
+      // do movement animation if it's current player's edge
+      if (this.id === currentEdge) {
+        var step = 1.0 / ((constants.MOVE_TIME / 1000.0) * 10.0);
+
+        stroke(255, 255, 255);
+        strokeWeight(4);
+
+        if (
+          destNode !== null &&
+          (this.startX === destNode.x && this.startY === destNode.y)
+        ) {
+          // Moving from end to start
+          for (var i = 0; i < edgeTimer; i++) {
+            // draw dots between that point and this
+            point(
+              lerp(this.endX, this.startX, step * (i + 1.0)),
+              lerp(this.endY, this.startY, step * (i + 1.0))
+            );
+          }
+        } else {
+          // Moving from start to end
+          for (var i = 0; i < edgeTimer; i++) {
+            // draw dots between that point and this
+            point(
+              lerp(this.startX, this.endX, step * (i + 1.0)),
+              lerp(this.startY, this.endY, step * (i + 1.0))
+            );
+          }
+        }
+
+        return;
+      } else {
+        // Blink green for another player
+        if (frameCount % 2 == 0) noStroke();
+        else stroke(255, 255, 255);
+      }
     } else if (visibleToPlayer) {
       stroke(0, 168, 0);
     } else if (barelyVisibleToPlayer) {
@@ -289,6 +334,10 @@ function onMoved(obj) {
   if (obj.edge !== null) {
     // set the edge to render the player inside
     edges[obj.edge].playerIn += 1;
+    if (obj.player === socket.id) {
+      currentEdge = obj.edge;
+      destNode = nodes[obj.node];
+    }
 
     // after the movement time, adjust the rendering
     window.setTimeout(() => {
@@ -303,7 +352,11 @@ function onMoved(obj) {
           obj.player === socket.id
         )
       );
-      if (obj.player === socket.id) currentNode = obj.node;
+      if (obj.player === socket.id) {
+        currentNode = obj.node;
+        currentEdge = -1;
+        destNode = null;
+      }
     }, constants.MOVE_TIME);
   } else {
     // the player died
@@ -400,6 +453,7 @@ function setup() {
 // GAME RENDERING
 
 let hideStartText = 0;
+let edgeTimer = 0;
 // called every frame
 function draw() {
   background(0);
@@ -412,9 +466,12 @@ function draw() {
 
   text(constants.ROOM_ID + " - LOCALHOST:3000", 129, 17);
   textSize(23);
-  text("DARK-MAZE", 1149, 683);
+  text("DARK-NETWORK", 1149, 683);
 
   if (edges && nodes) {
+    if (currentNode === -1) edgeTimer++;
+    else edgeTimer = 0;
+
     for (const edge in edges) {
       const [nodeCon1, nodeCon2] = edge.split("_");
 
@@ -428,7 +485,7 @@ function draw() {
 
       // draw the node, letting it know if there's a player inside and if
       // if it is visible to the player
-      edges[edge].draw(visible, barelyVisible);
+      edges[edge].draw(visible, barelyVisible, edgeTimer);
     }
 
     for (const node of nodes) {
@@ -529,7 +586,7 @@ function draw() {
   } else if (timer < 0 && !gameOver) {
     //in lobby
     textSize(56);
-    text("Waiting for more players to join...", width / 2, height / 2);
+    text("WAITING TO ENTER THE NETWORK...", width / 2, height / 2);
   }
 
   // Cooldown text
