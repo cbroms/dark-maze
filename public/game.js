@@ -546,9 +546,7 @@ function draw() {
     text("YOU OBTAINED A PAYLOAD", width / 2, 600);
     payloadTextTimer--;
     console.log("got a payload!");
-  }
-
-  if (payloadDeliverTextTimer > 0) {
+  } else if (payloadDeliverTextTimer > 0) {
     textSize(23);
     textAlign(LEFT, CENTER);
     text("YOU SUCCESSFULLY DELIVERED A PAYLOAD", width / 2, 600);
