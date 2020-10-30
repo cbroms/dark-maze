@@ -392,7 +392,7 @@ io.on("connection", (socket) => {
       }
 
       // if you're the good guy and the node is the payload target, drop it there
-      if (!state.players[socket.id].isBad && node === TARGET_NODE) {
+      if (!state.players[socket.id].isBad && node === TARGET_NODE && state.players[socket.id].hasPayload === true) {
         state.payloads_brought++;
         io.to(currRoomID).emit("droppedPayload", {
           player: socket.id,
