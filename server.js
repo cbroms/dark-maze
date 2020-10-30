@@ -326,6 +326,7 @@ io.on("connection", (socket) => {
       isBad: playerState.isBad,
       hasPayload: playerState.hasPayload,
       node: node,
+      wasKilled: false,
     });
 
     playerState.playerEdge = currEdge;
@@ -352,6 +353,7 @@ io.on("connection", (socket) => {
               isBad: playerState.isBad,
               hasPayload: false,
               node: 0,
+              wasKilled: true,
             });
             playerState.hasPayload = false;
             playerState.playerNode = 0;
@@ -375,6 +377,7 @@ io.on("connection", (socket) => {
               isBad: playerState.isBad,
               hasPayload: false,
               node: 0,
+              wasKilled: true,
             });
             playerState.hasPayload = false;
             playerState.playerNode = 0;

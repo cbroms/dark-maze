@@ -322,6 +322,10 @@ function onMoved(obj) {
     }
   }
 
+  if (iAmBad && obj.wasKilled === true) {
+    alert("You succesfully intercepted a packet!");
+  }
+
   if (obj.edge !== null) {
     // set the edge to render the player inside
     edges[obj.edge].playerIn += 1;
