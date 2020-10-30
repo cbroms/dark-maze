@@ -20,6 +20,8 @@ let CanY;
 
 let timer = -1;
 
+let BootUpSfx;
+
 // map position
 let mapNodes;
 let positions;
@@ -36,6 +38,9 @@ let payloadsInCenter = 0;
 let fontMonospace;
 
 function preload() {
+ // BootUpSfx = loadSound('assets/Bootup.mp3');
+
+
   BGImg = loadImage("assets/background.gif");
   StillBGImg = loadImage("assets/background.png");
   serverEmpty = loadImage("assets/serverempty.png");
@@ -404,6 +409,7 @@ function onEntered(obj) {
   if (obj.player === socket.id) {
     currentNode = obj.node;
     iAmBad = obj.isBad;
+    //BootUpSfx.play();
   }
 }
 
