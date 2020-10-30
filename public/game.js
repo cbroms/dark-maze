@@ -617,7 +617,7 @@ function mouseClicked() {
       nodes[i].mouseIsIn()
     ) {
       // make sure the player is not a bad player if the node is the target or payload node
-      if (iAmBad && (nodes[i].isPayload || nodes[i].isTarget)) {
+      if (iAmBad && (nodes[i].isPayload || nodes[i].isTarget || i === 0)) {
         alert("RESTRICTED SERVER");
       } else {
         socket.emit("move", i);

@@ -30,7 +30,7 @@ const MOVE_TIME = 3000; // 3 seconds
 
 const TARGET_NODE = 11;
 const MAX_PAYLOADS = 3;
-const WIN_PAYLOADS = 5;
+const WIN_PAYLOADS = 7;
 
 // the map
 // each index represents a node in the network. The array at each index contains
