@@ -522,7 +522,7 @@ function draw() {
     gameOver = true;
     timer = -1;
 
-    gameOver();
+    gameOverHandler();
   }
 
   if (timer > 0 && !gameStart) {
@@ -569,7 +569,7 @@ function draw() {
     textSize(23);
     text("TIME OUT", width / 2, 17);
 
-    gameOver();
+    gameOverHandler();
 
     // TODO: If we are done with shuffle timer, restart game
     // gameOver = false;
@@ -583,12 +583,12 @@ function draw() {
   // Cooldown text
 }
 
-let set = false;
+let setEnd = false;
 
-function gameOver() {
+function gameOverHandler() {
   // add the players back to the queue in 2 seconds
-  if (!set) {
-    set = true;
+  if (!setEnd) {
+    setEnd = true;
     window.setTimeout(() => {
       location.reload();
     }, 5000);
